@@ -1,0 +1,11 @@
+<resources>
+
+
+    <string name="app_name">Name To Ringtone</string>
+    <string name="version">Version</string>
+    <string name="privacy_policy">Privacy Policy</string>
+    <string name="storage_permission_allow_str">Please grant permission</string>
+    <string name="facebook_app_id">1378441163022708</string>
+
+
+</resources>

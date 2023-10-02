@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <color name="colorAccent">@color/theme_color</color>
+    <color name="colorPrimary">@color/theme_color</color>
+    <color name="colorPrimaryDark">@color/statusBarColor</color>
+    <color name="colorSecondary">#00b894</color>
+
+    <color name="black">#ff000000</color>
+    <color name="white">#ffffffff</color>
+    <color name="statusBarColor">#c2c2c0</color>
+    <color name="theme_color">#1e88e5</color>
+    <color name="colorBackground">#e9edf1</color>
+    <color name="lightCardBackground">#fcfdff</color>
+    <color name="navigationBarColor">#e9edf1</color>
+    <color name="default_item_color">#e6f4ea</color>
+    <color name="tabIconTint" >#80baff</color>
+
+</resources>
