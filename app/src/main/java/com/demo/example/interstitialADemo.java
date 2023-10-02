@@ -3,6 +3,7 @@ package com.demo.example;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -12,6 +13,8 @@ import com.demo.example.MetaAds.AdsUnit;
 import com.demo.example.MetaAds.FacebookAds;
 import com.facebook.ads.Ad;
 import com.facebook.ads.AdError;
+import com.facebook.ads.AdSize;
+import com.facebook.ads.AdView;
 import com.facebook.ads.InterstitialAd;
 import com.facebook.ads.InterstitialAdListener;
 
@@ -24,21 +27,11 @@ public class interstitialADemo extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main_activity);
-//        AdsUnit.BANNER = "IMG_16_9_APP_INSTALL";
-//        AdsUnit.INTERSTITIAL = "IMG_16_9_APP_INSTALL";
-//        FacebookAds.loadInterstitial(interstitialADemo.this);
-//
-//        FacebookAds.setBanner(findViewById(R.id.banner_container), interstitialADemo.this);
-//
-//        Button showInterstitial = findViewById(R.id.showInterstitial);
-//        showInterstitial.setOnClickListener(v -> {
-//            // Code here
-//            new FacebookAds(() -> {
-//                // Next Action
-//                Toast.makeText(interstitialADemo.this, "Ads Closed", Toast.LENGTH_SHORT).show();
-//            }).showInterstitial();
-//        });
 
+        AdView adView = new AdView(this, "1378441163022708_1378480329685458", AdSize.BANNER_HEIGHT_50);
+        LinearLayout adContainer = (LinearLayout) findViewById(R.id.banner_container);
+        adContainer.addView(adView);
+        adView.loadAd();
 
         interstitialAd = new InterstitialAd(this, "1378441163022708_1378632936336864");
         // Create listeners for the Interstitial Ad
