@@ -24,7 +24,13 @@ YouTube : https://www.youtube.com/AwesomeDesigner
 */
 
 public class FacebookAds {
-
+    public static boolean isAds = true;
+    public static String AD_Banner_ID = "1378441163022708_1378480329685458";
+    public static String AD_Interstitial_ID = "1378441163022708_1378632936336864";
+    public static InterstitialAd interstitialAd;
+    public interface onDismiss {
+        void OnDismiss();
+    }
     public static onDismiss onDismiss;
 
     public FacebookAds(onDismiss onDismiss) {
@@ -37,8 +43,8 @@ public class FacebookAds {
 
     public static void setBanner(LinearLayout BannerLayout, Context context) {
 
-        if (AdsUnit.isAds) {
-            AdView adView = new AdView(context, AdsUnit.BANNER, AdSize.BANNER_HEIGHT_50);
+        if (isAds) {
+            AdView adView = new AdView(context, AD_Banner_ID, AdSize.BANNER_HEIGHT_50);
             BannerLayout.addView(adView);
 
             AdListener adListener = new AdListener() {
@@ -73,10 +79,10 @@ public class FacebookAds {
     } //SetBanner End Here ================
 
     public static void loadInterstitial(Context context) {
-        if (AdsUnit.isAds) {
+        if (isAds) {
             // Initialize the Audience Network SDK
             AudienceNetworkAds.initialize(context);
-            AdsUnit.interstitialAd = new InterstitialAd(context, AdsUnit.INTERSTITIAL);
+            interstitialAd = new InterstitialAd(context, AD_Banner_ID);
 
             InterstitialAdListener interstitialAdListener = new InterstitialAdListener() {
                 @Override
@@ -88,7 +94,7 @@ public class FacebookAds {
                 @Override
                 public void onInterstitialDismissed(Ad ad) {
                     // Interstitial dismissed callback
-                    AdsUnit.interstitialAd = null;
+                    interstitialAd = null;
                     FacebookAds.loadInterstitial(context);
                     onDismiss.OnDismiss();
                 }
@@ -119,7 +125,7 @@ public class FacebookAds {
 
             // For auto play video ads, it's recommended to load the ad
             // at least 30 seconds before it is shown
-            AdsUnit.interstitialAd.loadAd(AdsUnit.interstitialAd.buildLoadAdConfig()
+            interstitialAd.loadAd(interstitialAd.buildLoadAdConfig()
                     .withAdListener(interstitialAdListener)
                     .build());
 
@@ -128,9 +134,9 @@ public class FacebookAds {
     } // loadInterstitial End Here =====
 
     public void showInterstitial() {
-        if (AdsUnit.interstitialAd.isAdLoaded()) {
+        if (interstitialAd.isAdLoaded()) {
             // Show the ad
-            AdsUnit.interstitialAd.show();
+            interstitialAd.show();
         } else {
             onDismiss.OnDismiss();
         }

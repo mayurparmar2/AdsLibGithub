@@ -1,28 +1,50 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-
     >
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_above="@id/banner1"
+        android:background="@color/black"
 
-    <Button
-        android:id="@+id/showInterstitial"
+        >
+
+        <Button
+            android:id="@+id/showInterstitial"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:layout_marginHorizontal="20dp"
+            android:text="Show Interstitial" />
+
+        <LinearLayout
+            android:id="@+id/banner_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/showInterstitial"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
+
+    </RelativeLayout>
+
+
+    <RelativeLayout
+        android:id="@+id/banner1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:text="Show Interstitial"
-        android:layout_marginHorizontal="20dp"
-        />
+        android:layout_alignParentBottom="true"
+        android:gravity="center">
 
-    <LinearLayout
-        android:layout_marginTop="10dp"
-        android:id="@+id/banner_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/showInterstitial"
-        android:orientation="vertical"
-        />
+        <RelativeLayout
+            android:id="@+id/banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:layout_gravity="center"
+            android:gravity="center" />
+    </RelativeLayout>
 
 </RelativeLayout>
