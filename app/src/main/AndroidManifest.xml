@@ -11,6 +11,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <!--    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>-->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
     <application
         android:name=".App"
@@ -23,15 +24,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
-        <!--        <meta-data-->
-        <!--            android:name="com.facebook.sdk.ApplicationId"-->
-        <!--            android:value="@string/facebook_app_id" />-->
-
-        <!--        <meta-data android:name="com.google.android.gms.ads.AD_MANAGER_APP"-->
-        <!--        	android:value="true" />-->
-
         <activity
-            android:name=".interstitialADemo"
+            android:name=".UnityDemo"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -42,19 +36,9 @@
             </intent-filter>
         </activity>
 
-<!--        <meta-data-->
-<!--            android:name="com.facebook.sdk.ApplicationId"-->
-<!--            android:value="@string/facebook_app_id" />-->
 
-<!--        <meta-data-->
-<!--            android:name="com.facebook.sdk.ApplicationId"-->
-<!--            android:value="@string/facebook_app_id" />-->
-
-<!--        <provider-->
-<!--            android:name="com.facebook.FacebookContentProvider"-->
-<!--            android:authorities="com.facebook.app.FacebookContentProvider249341956089060"-->
-<!--            android:exported="true" />-->
-
+<!--        <meta-data android:name="com.google.android.gms.ads.AD_MANAGER_APP"-->
+<!--        	android:value="true" />-->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

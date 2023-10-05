@@ -1,19 +1,11 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!--    <style name="AppTheme" parent="Theme.AppCompat.Light.NoActionBar">-->
-    <!--        <item name="colorPrimary">@color/colorPrimary</item>-->
-    <!--        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>-->
-    <!--        <item name="colorAccent">@color/colorAccent</item>-->
-    <!--    </style>-->
-    <style name="AppTheme" parent="@style/AppTheme_Light">
+    <style name="AppTheme" parent="@style/Theme.AppCompat.Light.NoActionBar">
         <item name="android:windowDisablePreview">true</item>
         <item name="android:navigationBarColor">@color/navigationBarColor</item>
         <item name="colorAccent">@color/colorAccent</item>
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
         <item name="colorSecondary">@color/colorSecondary</item>
-    </style>
-    <style name="AppTheme_Light" parent="@style/Theme.MaterialComponents.Light.NoActionBar">
-
     </style>
 
     <style name="home_bottom_text" parent="@style/Text_Bold">

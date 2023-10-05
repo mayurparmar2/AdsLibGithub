@@ -4,25 +4,40 @@ import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
+import com.demo.example.R;
 import com.facebook.ads.Ad;
 import com.facebook.ads.AdError;
 import com.facebook.ads.AdListener;
+import com.facebook.ads.AdOptionsView;
 import com.facebook.ads.AdSize;
 import com.facebook.ads.AdView;
 import com.facebook.ads.AudienceNetworkAds;
 import com.facebook.ads.InterstitialAd;
 import com.facebook.ads.InterstitialAdListener;
+import com.facebook.ads.MediaView;
+import com.facebook.ads.NativeAd;
+import com.facebook.ads.NativeAdListener;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class FbAds {
+    private  final String Counter_Ads = "Counter_Ads";
     public static boolean isAds = true;
     public static String AD_Banner_ID = "1378441163022708_1378480329685458";
     public static String AD_Interstitial_ID = "1378441163022708_1378632936336864";
     public static InterstitialAd interstitialAd;
 
     static ProgressDialog mDialog;
+    private String TAG = "FbAds";
+
     public interface onDismiss {
         void OnDismiss();
     }
@@ -30,7 +45,6 @@ public class FbAds {
     public FbAds(Activity activity) {
         AudienceNetworkAds.initialize(activity);
     }
-
     public void Interstitial_Show(final Activity activity) {
         if (isAds) {
             try {
@@ -45,12 +59,13 @@ public class FbAds {
                     @Override
                     public void onInterstitialDismissed(Ad ad) {
                         interstitialAd = null;
-                        FacebookAds.loadInterstitial(activity);
+                        loadInterstitial(activity);
                     }
 
                     @Override
                     public void onError(Ad ad, AdError adError) {
                         mDialog.dismiss();
+                        Log.e("MTAG", "FbAds.class,onError():" +adError.getErrorMessage());
 
                     }
                     @Override
@@ -76,21 +91,16 @@ public class FbAds {
             }
         }
     }
-
-
-    private static final String Counter_Ads = "Counter_Ads";
-
-
-    public static void setCounter_Ads(Context mContext, int string) {
+    public  void setCounter_Ads(Context mContext, int string) {
         mContext.getSharedPreferences(mContext.getPackageName(), 0).edit()
                 .putInt(Counter_Ads, string).commit();
     }
 
-    public static int getCounter_Ads(Context mContext) {
+    public int getCounter_Ads(Context mContext) {
         return mContext.getSharedPreferences(mContext.getPackageName(), 0).getInt(Counter_Ads, 1);
     }
 
-    public static void Interstitial_Show_Counter(final Activity activity) {
+    public void Interstitial_Show_Counter(final Activity activity) {
         if (isAds) {
             int counter_ads = getCounter_Ads(activity);
             Log.e("MTAG", "FbAds.class,counter_ads():" +counter_ads);
@@ -159,7 +169,7 @@ public class FbAds {
         }
     }
 
-    private static void loadInterstitial(Context context) {
+    private void loadInterstitial(Context context) {
         if (isAds) {
             // Initialize the Audience Network SDK
             AudienceNetworkAds.initialize(context);
@@ -174,7 +184,7 @@ public class FbAds {
                 public void onInterstitialDismissed(Ad ad) {
                     // Interstitial dismissed callback
                     interstitialAd = null;
-                    FacebookAds.loadInterstitial(context);
+                    loadInterstitial(context);
                 }
 
                 @Override
@@ -204,7 +214,7 @@ public class FbAds {
                     .build());
         }
     }
-    private static void Ad_Popup(Context mContext) {
+    private void Ad_Popup(Context mContext) {
         mDialog = mDialog.show(mContext, "Please Wait...", "Loading Ads", true);
         mDialog.setCancelable(true);
         mDialog.show();
@@ -250,5 +260,47 @@ public class FbAds {
         }
     }
 
+
+    NativeAd nativeAd;
+    private void loadNativeAd(Context context) {
+        nativeAd = new NativeAd(context, "1378441163022708_1379129396287218");
+
+        NativeAdListener nativeAdListener = new NativeAdListener() {
+            @Override
+            public void onMediaDownloaded(Ad ad) {
+
+            }
+
+            @Override
+            public void onError(Ad ad, AdError adError) {
+
+            }
+
+            @Override
+            public void onAdLoaded(Ad ad) {
+                // Race condition, load() called again before last ad was displayed
+                if (nativeAd == null || nativeAd != ad) {
+                    return;
+                }
+//                inflateAd(nativeAd);
+            }
+
+            @Override
+            public void onAdClicked(Ad ad) {
+
+            }
+
+            @Override
+            public void onLoggingImpression(Ad ad) {
+
+            }
+        };
+
+        // Request an ad
+        nativeAd.loadAd(
+                nativeAd.buildLoadAdConfig()
+                        .withAdListener(nativeAdListener)
+                        .build());
+    }
 
 }
