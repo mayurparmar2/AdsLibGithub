@@ -47,6 +47,9 @@ public class AdsManager {
                     new AdMobAds(context).Interstitial_Show_Counter(activity);
                     // Handle interstitial ad for AdMob
                     break;
+                case "facebook":
+                    facebookAds.Interstitial_Show_Counter(activity);
+                    break;
                 case "unity":
                     unityAds.Interstitial_Show_Counter(activity);
 //                new UnityAds().showInterstitialAd();

@@ -3,6 +3,7 @@ package com.demo.mydemo.manager;
 import android.app.Activity;
 import android.content.Context;
 import android.util.Log;
+import android.view.View;
 import android.widget.RelativeLayout;
 
 import com.demo.mydemo.App;
@@ -16,11 +17,11 @@ import com.unity3d.services.banners.BannerView;
 import com.unity3d.services.banners.UnityBannerSize;
 
 public class UnityMyAds implements IUnityAdsInitializationListener {
-    String AD_Banner_ID = "Banner_Android";
+    String AD_Banner_ID = "home";
     String AD_Interstitial_ID = "Interstitial1";
     String AD_Rewarded_ID = "Rewarded_Android";
     private String unityGameID = "5331426";
-    private Boolean testMode = true;
+    private Boolean testMode = false;
     public UnityMyAds(Context context) {
         com.unity3d.ads.UnityAds.initialize(context, unityGameID, testMode, this);
     }
@@ -42,6 +43,7 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
         mAdView.setListener(new BannerView.IListener() {
             @Override
             public void onBannerLoaded(BannerView bannerAdView) {
+                Ad_Layout.setVisibility(View.VISIBLE);
                 // Called when the banner is loaded.
                 Log.e("UnityAdsExample", "onBannerLoaded: " + bannerAdView.getPlacementId());
                 // Enable the correct button to hide the ad
@@ -49,6 +51,8 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
 
             @Override
             public void onBannerFailedToLoad(BannerView bannerAdView, BannerErrorInfo errorInfo) {
+                mAdView.destroy();
+                Ad_Layout.setVisibility(View.INVISIBLE);
                 Log.e("UnityAdsExample", "UnityAds Ads failed to load banner for " + bannerAdView.getPlacementId() + " with error: [" + errorInfo.errorCode + "] " + errorInfo.errorMessage);
                 // Note that the BannerErrorInfo object can indicate a no fill (refer to the API documentation).
             }
@@ -81,6 +85,7 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
                 IUnityAdsShowListener showListener = new IUnityAdsShowListener() {
                     @Override
                     public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
+
                         Log.e("Interstitial", "UnityAds Ads failed to show ad for " + placementId + " with error: [" + error + "] " + message);
                     }
 

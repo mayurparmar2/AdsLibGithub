@@ -29,26 +29,15 @@ import java.util.List;
 
 public class FacebookAds {
     private String TAG = "FacebookAds";
-
     private  final String Counter_Ads = "Counter_Ads";
-    public static boolean isAds = true;
-//    public static String AD_Banner_ID = "1378441163022708_1378480329685458";
-//    public static String AD_Banner_ID = "1378441163022708_1388693431997481";
-    public static String AD_Banner_ID = "IMG_16_9_APP_INSTALL";
-    public static String AD_Interstitial_ID = "1378441163022708_1378632936336864";
+    public static String AD_Banner_ID = "IMG_16_9_LINK";
+    public static String AD_Interstitial_ID = "VID_HD_9_16_39S_LINK";
     public static InterstitialAd interstitialAd;
-
     static ProgressDialog mDialog;
-
-    public interface onDismiss {
-        void OnDismiss();
-    }
-
     public FacebookAds(Context activity) {
         AudienceNetworkAds.initialize(activity);
     }
     public void Interstitial_Show(final Context context) {
-        if (isAds) {
             try {
                 Ad_Popup(context);
                 interstitialAd = new InterstitialAd(context, AD_Interstitial_ID);
@@ -91,36 +80,24 @@ public class FacebookAds {
                 }
                 Log.e("MTAG", "FbAds.class,Interstitial_Show():" +e.getMessage());
             }
-        }
-    }
-    public  void setCounter_Ads(Context mContext, int string) {
-        mContext.getSharedPreferences(mContext.getPackageName(), 0).edit()
-                .putInt(Counter_Ads, string).commit();
-    }
-
-    public int getCounter_Ads(Context mContext) {
-        return mContext.getSharedPreferences(mContext.getPackageName(), 0).getInt(Counter_Ads, 1);
     }
 
     public void Interstitial_Show_Counter(final Context context) {
-        if (isAds) {
-            int counter_ads = getCounter_Ads(context);
+            int counter_ads = AdsManager.getCounter_Ads(context);
             Log.e("MTAG", "FbAds.class,counter_ads():" +counter_ads);
             if (counter_ads >= 3) {
                 try {
-                    setCounter_Ads(context, 1);
+                    AdsManager.setCounter_Ads(context, 1);
                     Ad_Popup(context);
                     interstitialAd = new InterstitialAd(context, AD_Interstitial_ID);
                     InterstitialAdListener interstitialAdListener = new InterstitialAdListener() {
                         @Override
                         public void onInterstitialDisplayed(Ad ad) {
                             mDialog.dismiss();
-                            // Interstitial ad displayed callback
                         }
 
                         @Override
                         public void onInterstitialDismissed(Ad ad) {
-                            // Interstitial dismissed callback
                             interstitialAd = null;
                             loadInterstitial(context);
                         }
@@ -129,31 +106,21 @@ public class FacebookAds {
                         public void onError(Ad ad, AdError adError) {
                             mDialog.dismiss();
                             Log.e("MTAG", "FbAds.class,onError():" +adError.getErrorMessage());
-
-                            // Ad error callback
-                            //
-
                         }
 
                         @Override
                         public void onAdLoaded(Ad ad) {
                             interstitialAd.show();
-                            // Interstitial ad is loaded and ready to be displayed
                         }
 
                         @Override
                         public void onAdClicked(Ad ad) {
-                            // Ad clicked callback
                         }
 
                         @Override
                         public void onLoggingImpression(Ad ad) {
-                            // Ad impression logged callback
                         }
                     };
-
-                    // For auto play video ads, it's recommended to load the ad
-                    // at least 30 seconds before it is shown
                     interstitialAd.loadAd(interstitialAd.buildLoadAdConfig()
                             .withAdListener(interstitialAdListener)
                             .build());
@@ -166,25 +133,20 @@ public class FacebookAds {
                 }
             }else {
                 counter_ads = counter_ads + 1;
-                setCounter_Ads(context, counter_ads);
+                AdsManager.setCounter_Ads(context, counter_ads);
             }
-        }
     }
 
     private void loadInterstitial(Context context) {
-        if (isAds) {
-            // Initialize the Audience Network SDK
             AudienceNetworkAds.initialize(context);
             interstitialAd = new InterstitialAd(context, AD_Interstitial_ID);
             InterstitialAdListener interstitialAdListener = new InterstitialAdListener() {
                 @Override
                 public void onInterstitialDisplayed(Ad ad) {
-                    // Interstitial ad displayed callback
 
                 }
                 @Override
                 public void onInterstitialDismissed(Ad ad) {
-                    // Interstitial dismissed callback
                     interstitialAd = null;
                     loadInterstitial(context);
                 }
@@ -192,15 +154,12 @@ public class FacebookAds {
                 @Override
                 public void onError(Ad ad, AdError adError) {
                 }
-
                 @Override
                 public void onAdLoaded(Ad ad) {
-
                 }
 
                 @Override
                 public void onAdClicked(Ad ad) {
-                    // Ad clicked callback
                 }
 
                 @Override
@@ -208,13 +167,9 @@ public class FacebookAds {
                     // Ad impression logged callback
                 }
             };
-
-            // For auto play video ads, it's recommended to load the ad
-            // at least 30 seconds before it is shown
             interstitialAd.loadAd(interstitialAd.buildLoadAdConfig()
                     .withAdListener(interstitialAdListener)
                     .build());
-        }
     }
     private void Ad_Popup(Context mContext) {
         mDialog = mDialog.show(mContext, "Please Wait...", "Loading Ads", true);
@@ -223,11 +178,8 @@ public class FacebookAds {
     }
 
     public void Banner_Show(final RelativeLayout Ad_Layout, Context context) {
-
-        if (isAds) {
             AdView adView = new AdView(context, AD_Banner_ID, AdSize.BANNER_HEIGHT_50);
             Ad_Layout.addView(adView);
-
             AdListener adListener = new AdListener() {
                 @Override
                 public void onError(Ad ad, AdError adError) {
@@ -254,30 +206,23 @@ public class FacebookAds {
                     // Ad impression logged callback
                 }
             };
-
             // Request an ad
             adView.loadAd(adView.buildLoadAdConfig().withAdListener(adListener).build());
             // load ad
             adView.loadAd();
-        }
     }
 
 
     NativeAd nativeAd;
     private void loadNativeAd(Context context) {
         nativeAd = new NativeAd(context, "1378441163022708_1379129396287218");
-
         NativeAdListener nativeAdListener = new NativeAdListener() {
             @Override
             public void onMediaDownloaded(Ad ad) {
-
             }
-
             @Override
             public void onError(Ad ad, AdError adError) {
-
             }
-
             @Override
             public void onAdLoaded(Ad ad) {
                 // Race condition, load() called again before last ad was displayed
@@ -286,19 +231,13 @@ public class FacebookAds {
                 }
 //                inflateAd(nativeAd);
             }
-
             @Override
             public void onAdClicked(Ad ad) {
-
             }
-
             @Override
             public void onLoggingImpression(Ad ad) {
-
             }
         };
-
-        // Request an ad
         nativeAd.loadAd(
                 nativeAd.buildLoadAdConfig()
                         .withAdListener(nativeAdListener)
