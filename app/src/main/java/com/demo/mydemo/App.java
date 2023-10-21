@@ -4,6 +4,9 @@ import android.app.Application;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.util.Log;
+
+import com.demo.mydemo.manager.DataModel;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
