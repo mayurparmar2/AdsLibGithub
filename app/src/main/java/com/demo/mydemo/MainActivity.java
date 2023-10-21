@@ -40,17 +40,16 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(internetReceiver, filter);
     }
     protected void reloadAds(){
-        new App.UpdateTask().execute();
-        new Handler().postDelayed(new Runnable() {
+        new App.UpdateTask(new App.UpdateTask.OnAdsJsonLoadListener() {
             @Override
-            public void run() {
+            public void onLoaded() {
                 AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
                 adsManager.initializeAds(MainActivity.this);
                 adsManager.loadBannerAd();
                 adsManager.showInterstitialAd(MainActivity.this);
                 adsManager.loadNativeAd();
             }
-        },1000);
+        }).execute();
     }
     @Override
     protected void onDestroy() {

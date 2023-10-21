@@ -54,19 +54,11 @@ public class AdMobAds {
     }
 
 
-    private static final String Counter_Ads = "Counter_Ads";
-    public static void setCounter_Ads(Context mContext, int string) {
-        mContext.getSharedPreferences(mContext.getPackageName(), 0).edit()
-                .putInt(Counter_Ads, string).commit();
-    }
-    public static int getCounter_Ads(Context mContext) {
-        return mContext.getSharedPreferences(mContext.getPackageName(), 0)
-                .getInt(Counter_Ads, 1);
-    }
+
     public static void Interstitial_Show_Counter(final Activity activity) {
-        int counter_ads = getCounter_Ads(activity);
+        int counter_ads = AdsManager.getCounter_Ads(activity);
         if (counter_ads >= App.adsData.getCounter()) {
-            setCounter_Ads(activity, 1);
+            AdsManager.setCounter_Ads(activity, 1);
             try {
                 Ad_Popup(activity);
                 AdRequest adRequest = new AdRequest.Builder().build();
@@ -88,7 +80,7 @@ public class AdMobAds {
             }
         } else {
             counter_ads = counter_ads + 1;
-            setCounter_Ads(activity, counter_ads);
+            AdsManager.setCounter_Ads(activity, counter_ads);
         }
     }
     private static void Ad_Popup(Context mContext) {

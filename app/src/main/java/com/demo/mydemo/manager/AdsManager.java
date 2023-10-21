@@ -1,6 +1,7 @@
 package com.demo.mydemo.manager;
 
 import android.app.Activity;
+import android.content.Context;
 import android.widget.RelativeLayout;
 
 
@@ -47,7 +48,7 @@ public class AdsManager {
                     // Handle interstitial ad for AdMob
                     break;
                 case "unity":
-                    unityAds.Interstitial_Show(activity);
+                    unityAds.Interstitial_Show_Counter(activity);
 //                new UnityAds().showInterstitialAd();
                     break;
                 // Add cases for other platforms if needed
@@ -88,5 +89,13 @@ public class AdsManager {
         }
     }
 
-
+    private static final String Counter_Ads = "Counter_Ads";
+    public static void setCounter_Ads(Context mContext, int string) {
+        mContext.getSharedPreferences(mContext.getPackageName(), 0).edit()
+                .putInt(Counter_Ads, string).commit();
+    }
+    public static int getCounter_Ads(Context mContext) {
+        return mContext.getSharedPreferences(mContext.getPackageName(), 0)
+                .getInt(Counter_Ads, 1);
+    }
 }

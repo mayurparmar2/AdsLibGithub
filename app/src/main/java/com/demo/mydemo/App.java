@@ -18,11 +18,8 @@ public class App extends Application {
     public static final String TAG = "App";
     private static Context context;
     public static App mInstance;
-    public static DataModel adsData = null;
+    public static DataModel adsData = new DataModel();
     public static final String AdsUrl = "https://mayurparmar2.github.io/AlarmDemo/FlightTracker.json";
-    public static Context getContext() {
-        return context;
-    }
 
     @Override
     public void onCreate() {
@@ -98,9 +95,25 @@ public class App extends Application {
         return dataModel;
     }
     public static class UpdateTask extends AsyncTask<String, String,String> {
+        UpdateTask(){
+        }
+        OnAdsJsonLoadListener onAdsJsonLoadListener;
+        interface OnAdsJsonLoadListener{
+            void onLoaded();
+        }
+        UpdateTask(OnAdsJsonLoadListener onAdsJsonLoadListener){
+            this.onAdsJsonLoadListener = onAdsJsonLoadListener;
+        }
         protected String doInBackground(String... urls) {
             adsData=readJsonFromUrl();
             return null;
+        }
+        @Override
+        protected void onPostExecute(String s) {
+            super.onPostExecute(s);
+            if(onAdsJsonLoadListener!=null){
+                onAdsJsonLoadListener.onLoaded();
+            }
         }
     }
 }
