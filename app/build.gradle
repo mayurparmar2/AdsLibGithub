@@ -4,7 +4,7 @@ apply plugin: 'com.android.application'
 android {
     compileSdkVersion 33
     defaultConfig {
-        applicationId "com.demo.example"
+        applicationId "com.demo.mydemo"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 1
@@ -79,6 +79,6 @@ dependencies {
 
 
     implementation 'com.unity3d.ads:unity-ads:4.7.0'
+    implementation 'com.google.android.gms:play-services-ads:21.3.0'
     implementation 'com.facebook.android:audience-network-sdk:6.16.0'
-    
 }
