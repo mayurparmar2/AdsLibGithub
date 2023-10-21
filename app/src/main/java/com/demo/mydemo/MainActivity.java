@@ -26,35 +26,31 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.unity_activity);
         adContainer = findViewById(R.id.banner1);
-
         internetReceiver = new InternetReceiver(isConnected -> {
             if (isConnected) {
+                reloadAds();
                 showToast("Internet is connected");
             } else {
                 showToast("No internet connection");
             }
         });
-
+        reloadAds();
         // Register the receiver to listen for connectivity changes
         IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
         registerReceiver(internetReceiver, filter);
-
-
+    }
+    protected void reloadAds(){
+        new App.UpdateTask().execute();
         new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
                 adsManager.initializeAds(MainActivity.this);
                 adsManager.loadBannerAd();
+                adsManager.showInterstitialAd(MainActivity.this);
                 adsManager.loadNativeAd();
-
-                Button button =  findViewById(R.id.showInterstitial);
-                button.setOnClickListener(view -> {
-                    adsManager.showInterstitialAd(MainActivity.this);
-                });
             }
-        },2000);
-
+        },1000);
     }
     @Override
     protected void onDestroy() {

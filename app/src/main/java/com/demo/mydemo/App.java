@@ -14,7 +14,7 @@ import java.net.URL;
 public class App extends Application {
     public static final String TAG = "App";
     private static Context context;
-    private static App mInstance;
+    public static App mInstance;
     public static DataModel adsData = null;
     public static final String AdsUrl = "https://mayurparmar2.github.io/AlarmDemo/FlightTracker.json";
     public static Context getContext() {
@@ -37,7 +37,7 @@ public class App extends Application {
         return appApplication;
     }
 
-    public DataModel readJsonFromUrl() {
+    public static DataModel readJsonFromUrl() {
         DataModel dataModel= new DataModel();
         try {
             URL url = new URL(AdsUrl);
@@ -94,7 +94,7 @@ public class App extends Application {
         }
         return dataModel;
     }
-    private class UpdateTask extends AsyncTask<String, String,String> {
+    public static class UpdateTask extends AsyncTask<String, String,String> {
         protected String doInBackground(String... urls) {
             adsData=readJsonFromUrl();
             return null;
