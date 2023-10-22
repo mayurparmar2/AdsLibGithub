@@ -20,13 +20,12 @@
             android:layout_marginHorizontal="20dp"
             android:text="Show Interstitial" />
 
-        <LinearLayout
-            android:id="@+id/banner_container"
+        <FrameLayout
+            android:id="@+id/mm1"
+            android:layout_below="@id/showInterstitial"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_below="@id/showInterstitial"
-            android:layout_marginTop="10dp"
-            android:orientation="vertical" />
+            android:layout_marginTop="16dp" />
 
     </RelativeLayout>
 

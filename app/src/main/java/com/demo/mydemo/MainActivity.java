@@ -4,8 +4,10 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
@@ -21,11 +23,17 @@ import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
     private RelativeLayout adContainer;
+    private FrameLayout adContainerNative;
     private InternetReceiver internetReceiver;
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.unity_activity);
         adContainer = findViewById(R.id.banner1);
+        adContainerNative = (FrameLayout)findViewById(R.id.mm1);
+        Log.e("MTAG", "onCreate" +adContainerNative);
+
+
+
         internetReceiver = new InternetReceiver(isConnected -> {
             if (isConnected) {
                 reloadAds();
@@ -43,11 +51,17 @@ public class MainActivity extends AppCompatActivity {
         new App.UpdateTask(new App.UpdateTask.OnAdsJsonLoadListener() {
             @Override
             public void onLoaded() {
-                AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
-                adsManager.initializeAds(MainActivity.this);
-                adsManager.loadBannerAd();
-                adsManager.showInterstitialAd(MainActivity.this);
-                adsManager.loadNativeAd();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
+                        adsManager.initializeAds(MainActivity.this);
+                        adsManager.loadBannerAd();
+                        adsManager.showInterstitialAd(MainActivity.this);
+                        adsManager.loadNativeAd(adContainerNative);
+                        adsManager.startAdRefresh(10000,adContainerNative);
+                    }
+                });
             }
         }).execute();
     }

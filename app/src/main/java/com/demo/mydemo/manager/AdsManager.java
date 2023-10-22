@@ -2,6 +2,9 @@ package com.demo.mydemo.manager;
 
 import android.app.Activity;
 import android.content.Context;
+import android.os.Handler;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 
 
@@ -16,11 +19,13 @@ public class AdsManager {
     AdMobAds adMobAds;
     FacebookAds facebookAds;
     UnityMyAds unityAds;
+    private Handler adRefreshHandler;
 
 
     public AdsManager(Activity context, RelativeLayout adContainer) {
         this.context = context;
         this.adContainer = adContainer;
+        adRefreshHandler = new Handler();
     }
 
     public void initializeAds(Activity activity) {
@@ -75,11 +80,11 @@ public class AdsManager {
         }
     }
 
-    public void loadNativeAd() {
+    public void loadNativeAd(FrameLayout layout) {
         if(App.adsData.getEnable()){
             switch (App.adsData.getAdPlatform()) {
                 case "AdMobAds":
-                    // Handle native ad for AdMob
+                    adMobAds.loadAdMobNativeAd(layout,context);
                     break;
                 case "facebook":
 //                new FacebookAds().loadNativeAd();
@@ -91,7 +96,15 @@ public class AdsManager {
             }
         }
     }
-
+    public void startAdRefresh(int AD_REFRESH_INTERVAL,FrameLayout viewGroup) {
+        adRefreshHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                loadNativeAd(viewGroup);
+                adRefreshHandler.postDelayed(this, AD_REFRESH_INTERVAL);
+            }
+        }, AD_REFRESH_INTERVAL);
+    }
     private static final String Counter_Ads = "Counter_Ads";
     public static void setCounter_Ads(Context mContext, int string) {
         mContext.getSharedPreferences(mContext.getPackageName(), 0).edit()
