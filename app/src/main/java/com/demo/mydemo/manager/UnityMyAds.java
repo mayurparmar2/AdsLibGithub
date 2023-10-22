@@ -120,5 +120,49 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
             }
 
     }
+    public void ShowRewardedAd(Activity activity){
+        IUnityAdsShowListener showListener = new IUnityAdsShowListener() {
+            @Override
+            public void onUnityAdsShowFailure(String placementId, UnityAds.UnityAdsShowError error, String message) {
+                Log.e("Rewarded", "UnityAds Ads failed to show ad for " + placementId + " with error: [" + error + "] " + message);
+                // Re-enable the button if the user should be allowed to watch another rewarded ad
+//                showInterstitial.setEnabled(true);
+            }
 
+            @Override
+            public void onUnityAdsShowStart(String placementId) {
+                Log.e("Rewarded", "onUnityAdsShowStart: " + placementId);
+            }
+
+            @Override
+            public void onUnityAdsShowClick(String placementId) {
+                Log.e("Rewarded", "onUnityAdsShowClick: " + placementId);
+            }
+
+            @Override
+            public void onUnityAdsShowComplete(String placementId, UnityAds.UnityAdsShowCompletionState state) {
+                Log.e("Rewarded", "onUnityAdsShowComplete: " + placementId);
+                if (state.equals(com.unity3d.ads.UnityAds.UnityAdsShowCompletionState.COMPLETED)) {
+                    // Reward the user for watching the ad to completion
+                } else {
+                    // Do not reward the user for skipping the ad
+                }
+                // Re-enable the button if the user should be allowed to watch another rewarded ad
+//                showInterstitial.setEnabled(true);
+            }
+        };
+
+        com.unity3d.ads.UnityAds.load(AD_Rewarded_ID, new IUnityAdsLoadListener() {
+            @Override
+            public void onUnityAdsAdLoaded(String placementId) {
+                Log.e("Rewarded", "onUnityAdsAdLoaded" +placementId);
+                com.unity3d.ads.UnityAds.show(activity, AD_Rewarded_ID, new UnityAdsShowOptions(), showListener);
+            }
+
+            @Override
+            public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
+                Log.e("Rewarded", "UnityAds Ads failed to load ad for " + placementId + " with error: [" + error + "] " + message);
+            }
+        });
+    }
 }

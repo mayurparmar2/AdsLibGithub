@@ -145,15 +145,8 @@ public class AdMobAds {
         try {
             AdLoader.Builder builder = new AdLoader.Builder(context, AD_MANAGER_AD_UNIT_ID);
             builder.forNativeAd(nativeAd -> {
-                // Assumes you have a placeholder FrameLayout in your View layout
-                // (with id fl_adplaceholder) where the ad is to be placed.
-
-                // Assumes that your ad layout is in a file call native_ad_layout.xml
-                // in the res/layout folder
                 @SuppressLint("InflateParams") NativeAdView adView = (NativeAdView) ((Activity) context).getLayoutInflater()
                         .inflate(R.layout.admob_native_ad_template, null);
-                // This method sets the text, images and the native ad, etc into the ad
-                // view.
                 populateNativeAdView(nativeAd, adView);
                 viewGroup.removeAllViews();
                 viewGroup.addView(adView);
@@ -161,11 +154,8 @@ public class AdMobAds {
 
 
             VideoOptions videoOptions = new VideoOptions.Builder().setStartMuted(true).build();
-
             NativeAdOptions adOptions = new NativeAdOptions.Builder().setVideoOptions(videoOptions).build();
-
             builder.withNativeAdOptions(adOptions);
-
             AdLoader adLoader = builder.withAdListener(new AdListener() {
                 @Override
                 public void onAdFailedToLoad(@NonNull LoadAdError loadAdError) {
@@ -174,7 +164,6 @@ public class AdMobAds {
 
                 }
             }).build();
-
             adLoader.loadAd(new AdRequest.Builder().build());
         } catch (Exception e) {
             e.printStackTrace();
