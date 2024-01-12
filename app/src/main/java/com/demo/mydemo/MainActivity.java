@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
         internetReceiver = new InternetReceiver(isConnected -> {
             if (isConnected) {
                 reloadAds();
-                showToast("Internet is connected");
+//                showToast("Internet is connected");
             } else {
                 showToast("No internet connection");
             }
