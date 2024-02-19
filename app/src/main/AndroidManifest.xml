@@ -15,7 +15,7 @@
     <uses-permission android:name="com.google.android.gms.permission.AD_ID"/>
 
     <application
-        android:name=".App"
+        android:name=".App2"
         android:allowBackup="true"
         android:hardwareAccelerated="true"
         android:icon="@drawable/icon200"
@@ -28,8 +28,19 @@
 
         <meta-data android:name="com.google.android.gms.ads.AD_MANAGER_APP"
         	android:value="true" />
+<!--        <activity-->
+<!--            android:name="com.demo.mydemo.MainActivity"-->
+<!--            android:exported="true"-->
+<!--            android:screenOrientation="portrait">-->
+<!--            <intent-filter>-->
+<!--                <action android:name="android.intent.action.MAIN" />-->
+<!--                <action android:name="android.intent.action.VIEW" />-->
+
+<!--                <category android:name="android.intent.category.LAUNCHER" />-->
+<!--            </intent-filter>-->
+<!--        </activity>-->
         <activity
-            android:name="com.demo.mydemo.MainActivity"
+            android:name="com.demo.mydemo.Launcherrrr"
             android:exported="true"
             android:screenOrientation="portrait">
             <intent-filter>
@@ -39,7 +50,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
 
 <!--        <meta-data android:name="com.google.android.gms.ads.AD_MANAGER_APP"-->
 <!--        	android:value="true" />-->

@@ -1,0 +1,49 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'world.snacks.hub'
+    compileSdk 33
+
+    defaultConfig {
+        minSdk 21
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+
+//    implementation 'androidx.appcompat:appcompat:1.6.1'
+//    implementation 'com.google.android.material:material:1.11.0'
+
+    implementation 'androidx.appcompat:appcompat:1.5.1'
+    implementation 'com.google.android.material:material:1.7.0'
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0-alpha1'
+    implementation 'pl.droidsonroids.gif:android-gif-drawable:1.0.6'
+
+
+    implementation 'com.startapp:inapp-sdk:4.11.5'
+    implementation 'com.google.android.gms:play-services-ads:21.3.0'
+    implementation 'com.unity3d.ads:unity-ads:4.7.0'
+    implementation 'com.google.android.gms:play-services-ads:21.3.0'
+
+    implementation('com.google.ads.mediation:facebook:6.16.0.0') {
+        exclude group: "com.google.android.gms", module: "play-services-ads"
+    }
+//    implementation 'com.facebook.android:audience-network-sdk:6.16.0'
+
+}

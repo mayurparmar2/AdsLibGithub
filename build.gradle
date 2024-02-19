@@ -1,11 +1,11 @@
 buildscript {
-//ext.kotlin_version = '1.7.0'
+ext.kotlin_version = '1.7.0'
     repositories {
         google()
         jcenter()
     }
     dependencies {
-      //  classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.android.tools.build:gradle:7.3.1'
 
         //=> UnsupportedOperationException("M
@@ -21,13 +21,13 @@ buildscript {
 
         /* Replace */
 
-        // From =>  setVisibility(0);   => setVisibility(View.VISIBLE);
-        // From =>  setVisibility(8);  =>setVisibility(View.GONE);
+        // From =>  setVisibility(View.VISIBLE);   => setVisibility(View.VISIBLE);
+        // From =>  setVisibility(View.GONE);  =>setVisibility(View.GONE);
 
         /* Replace xml */
 
         // From =>    :layout_collapseMode="2"  =>    name="none" value="0",name="pin" value="1",name="parallax" value="2"
-        // From =>    Of="0" => Of="parent"
+        // From =>    Of="parent" => Of="parent"
         // From =>     =>
         // From =>     =>
         // From =>     =>

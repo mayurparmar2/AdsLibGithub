@@ -15,5 +15,8 @@
     <color name="navigationBarColor">#e9edf1</color>
     <color name="default_item_color">#e6f4ea</color>
     <color name="tabIconTint" >#80baff</color>
+    <color name="gnt_black">#000000</color>
+    <color name="gnt_blue">#4285f4</color>
+    <color name="gnt_white">#ffffff</color>
 
 </resources>

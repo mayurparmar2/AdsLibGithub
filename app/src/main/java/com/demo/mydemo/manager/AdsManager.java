@@ -1,16 +1,25 @@
 package com.demo.mydemo.manager;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.Dialog;
+import android.content.ActivityNotFoundException;
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Handler;
-import android.view.ViewGroup;
+import android.view.View;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
+import android.widget.TextView;
 
 
 import com.demo.mydemo.App;
-
-import java.util.Map;
+import com.demo.mydemo.R;
 
 public class AdsManager {
     private Activity context;
@@ -114,4 +123,79 @@ public class AdsManager {
         return mContext.getSharedPreferences(mContext.getPackageName(), 0)
                 .getInt(Counter_Ads, 1);
     }
+
+
+
+
+    public void Exit_Popup_Without_Ads(final Context context) {
+        try {
+            @SuppressLint("ResourceType") final Dialog dialog = new Dialog(context, 16973834);
+            dialog.requestWindowFeature(1);
+            if (dialog.getWindow() != null) {
+                dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0));
+            }
+            dialog.setCancelable(true);
+            dialog.setContentView(R.layout.without_ads_exit);
+            ((TextView) dialog.findViewById(R.id.title)).setText("Do You Want To Exit ?");
+            Button button = (Button) dialog.findViewById(R.id.Btn_Yes);
+            Button button2 = (Button) dialog.findViewById(R.id.Btn_Rate);
+            Button button3 = (Button) dialog.findViewById(R.id.Btn_No);
+//            Native(context, (RelativeLayout) dialog.findViewById(R.id.banner), 1);
+            button.setText("Yes");
+            button2.setText("Rate Us");
+            button3.setText("No");
+            button.setOnClickListener(new View.OnClickListener() { // from class: world.snacks.hub.Pizza.21
+                @Override // android.view.View.OnClickListener
+                public void onClick(View view) {
+                    try {
+                        dialog.dismiss();
+                        System.exit(0);
+                    } catch (Exception unused) {
+                    }
+                }
+            });
+            button2.setOnClickListener(new View.OnClickListener() { // from class: world.snacks.hub.Pizza.22
+                @SuppressLint("WrongConstant")
+                @Override // android.view.View.OnClickListener
+                public void onClick(View view) {
+                    Intent intent = new Intent("android.intent.action.VIEW", Uri.parse("market://details?id=" + context.getPackageName()));
+                    intent.addFlags(1207959552);
+                    try {
+                        context.startActivity(intent);
+                    } catch (ActivityNotFoundException unused) {
+                        Context context2 = context;
+                        context2.startActivity(new Intent("android.intent.action.VIEW", Uri.parse("http://play.google.com/OneForAll/apps/details?id=" + context.getPackageName())));
+                    }
+                }
+            });
+            button3.setOnClickListener(new View.OnClickListener() { // from class: world.snacks.hub.Pizza.23
+                @Override // android.view.View.OnClickListener
+                public void onClick(View view) {
+                    try {
+                        dialog.dismiss();
+                    } catch (Exception unused) {
+                    }
+                }
+            });
+            dialog.show();
+        } catch (Exception unused) {
+        }
+    }
+//    public static void Native(Context context, RelativeLayout relativeLayout, int i2) {
+//        if (isNetworkConnected(context) && !show_ads.equals("0") && n_nooff.equals("1")) {
+//            if (b_n_ex.equals("1")) {
+//                Banner_FB(context, relativeLayout, i2);
+//            } else {
+//                Native_FB(context, relativeLayout, i2);
+//            }
+//        }
+//    }
+    public static boolean isNetworkConnected(Context context) {
+        NetworkInfo activeNetworkInfo = ((ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE)).getActiveNetworkInfo();
+        if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
+            return true;
+        }
+        return false;
+    }
+
 }
