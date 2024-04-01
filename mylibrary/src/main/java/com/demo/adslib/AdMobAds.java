@@ -1,4 +1,4 @@
-package com.demo.mydemo;
+package com.demo.adslib;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -14,6 +14,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import com.ads.adslib.R;
 import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdLoader;
 import com.google.android.gms.ads.AdRequest;
@@ -32,8 +33,6 @@ import com.google.android.gms.ads.nativead.NativeAdOptions;
 import com.google.android.gms.ads.nativead.NativeAdView;
 
 import java.util.Objects;
-
-import world.snacks.hub.R;
 
 public class AdMobAds {
     public  static String AD_Banner_ID = "/6499/example/banner";
@@ -147,6 +146,7 @@ public class AdMobAds {
                 viewGroup.removeAllViews();
                 viewGroup.addView(adView);
             });
+
 
 
             VideoOptions videoOptions = new VideoOptions.Builder().setStartMuted(true).build();

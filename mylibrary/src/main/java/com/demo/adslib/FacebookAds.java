@@ -1,4 +1,4 @@
-package com.demo.mydemo;
+package com.demo.adslib;
 
 import android.app.ProgressDialog;
 import android.content.Context;

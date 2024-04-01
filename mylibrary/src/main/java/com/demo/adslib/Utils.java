@@ -1,4 +1,4 @@
-package com.demo.mydemo;
+package com.demo.adslib;
 
 import android.os.AsyncTask;
 import android.util.Log;

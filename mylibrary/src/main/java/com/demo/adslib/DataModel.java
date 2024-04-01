@@ -1,4 +1,4 @@
-package com.demo.mydemo;
+package com.demo.adslib;
 
 
 public class DataModel {
