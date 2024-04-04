@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

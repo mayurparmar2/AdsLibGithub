@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.content.IntentFilter;
 import android.net.ConnectivityManager;
@@ -8,8 +8,11 @@ import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.demo.adslibs.DataModel.AdsData;
 
 public class MainActivity extends AppCompatActivity {
     private RelativeLayout adContainer;
@@ -38,22 +41,26 @@ public class MainActivity extends AppCompatActivity {
         registerReceiver(internetReceiver, filter);
     }
     protected void reloadAds(){
-        new Utils.UpdateTask(new Utils.UpdateTask.OnAdsJsonLoadListener() {
-            @Override
-            public void onLoaded() {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
-                        adsManager.initializeAds(MainActivity.this);
-                        adsManager.loadBannerAd();
-                        adsManager.showInterstitialAd(MainActivity.this);
-                        adsManager.loadNativeAd(adContainerNative);
-                        adsManager.startAdRefresh(10000,adContainerNative);
-                    }
-                });
-            }
-        }).execute();
+        if(App.isLoaded){
+            AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
+            adsManager.initializeAds(MainActivity.this);
+            adsManager.loadBannerAd();
+            adsManager.showInterstitialAd(MainActivity.this);
+        }else {
+            Utils.UpdateTask("/AdsCC/config.json",new Utils.OnAdsJsonLoadListener() {
+                @Override
+                public void onLoaded(@NonNull AdsData adsData) {
+                    AdsManager adsManager = new AdsManager(MainActivity.this, adContainer);
+                    adsManager.initializeAds(MainActivity.this);
+                    adsManager.loadBannerAd();
+                    adsManager.showInterstitialAd(MainActivity.this);
+                }
+                @Override
+                public void onFailure(@NonNull Throwable th) {
+
+                }
+            });
+        }
     }
     @Override
     protected void onDestroy() {

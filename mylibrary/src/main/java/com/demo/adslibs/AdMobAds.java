@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -72,7 +72,7 @@ public class AdMobAds {
 
     public static void Interstitial_Show_Counter(final Activity activity) {
         int counter_ads = AdsManager.getCounter_Ads(activity);
-        if (counter_ads >= Utils.adsData.getCounter()) {
+        if (counter_ads >= Utils.getAdsData().getAds().getCounter()) {
             AdsManager.setCounter_Ads(activity, 1);
             try {
                 Ad_Popup(activity);
@@ -103,8 +103,8 @@ public class AdMobAds {
         progressDialog.setCancelable(true);
         progressDialog.show();
     }
-    public void Banner_Show(final RelativeLayout Ad_Layout, Context context) {
-        AdView mAdView = new AdView(context);
+    public void Banner_Show(final RelativeLayout Ad_Layout, Activity activity) {
+        AdView mAdView = new AdView(activity);
         mAdView.setAdSize(AdSize.BANNER);
         mAdView.setAdUnitId(AD_Banner_ID);
         AdRequest adore = new AdRequest.Builder().build();

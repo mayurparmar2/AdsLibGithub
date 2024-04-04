@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 
+import com.demo.adslibs.DataModel.Unity;
 import com.unity3d.ads.IUnityAdsInitializationListener;
 import com.unity3d.ads.IUnityAdsLoadListener;
 import com.unity3d.ads.IUnityAdsShowListener;
@@ -16,13 +17,13 @@ import com.unity3d.services.banners.BannerView;
 import com.unity3d.services.banners.UnityBannerSize;
 
 public class UnityMyAds implements IUnityAdsInitializationListener {
-    String AD_Banner_ID = "home";
-    String AD_Interstitial_ID = "Interstitial1";
-    String AD_Rewarded_ID = "Rewarded_Android";
-    private String unityGameID = "5331426";
+//    String AD_Banner_ID = "bannerHome";
+    Unity unity;
+
     private Boolean testMode = false;
     public UnityMyAds(Context context) {
-        UnityAds.initialize(context, unityGameID, testMode, this);
+        unity = Utils.getAdsData().getAds().getAds_unit_id().getUnity();
+        UnityAds.initialize(context, unity.getGame_id(), testMode, this);
     }
     @Override
     public void onInitializationComplete() {
@@ -35,7 +36,7 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
         Log.e("MTAG", "onInitializationFailed" );
     }
     public void Banner_Show(final RelativeLayout Ad_Layout, Activity activity) {
-        BannerView mAdView = new BannerView(activity, AD_Banner_ID, new UnityBannerSize(320, 50));
+        BannerView mAdView = new BannerView(activity, unity.getBanner_id(), new UnityBannerSize(320, 50));
         // Set the listener for banner lifecycle events:
         mAdView.load();
         Ad_Layout.addView(mAdView);
@@ -71,7 +72,7 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
     }
     public void Interstitial_Show_Counter(Activity activity) {
         int counter_ads = AdsManager.getCounter_Ads(activity);
-        if (counter_ads >= Utils.adsData.getCounter()) {
+        if (counter_ads >= Utils.getAdsData().getAds().getCounter()) {
             AdsManager.setCounter_Ads(activity, 1);
             Interstitial_Show(activity);
         } else {
@@ -103,11 +104,11 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
                         Log.e("Interstitial", "onUnityAdsShowComplete: " + placementId);
                     }
                 };
-                UnityAds.load(AD_Interstitial_ID, new IUnityAdsLoadListener() {
+                UnityAds.load(unity.getInterstitial_id(), new IUnityAdsLoadListener() {
                     @Override
                     public void onUnityAdsAdLoaded(String placementId) {
                         Log.e("MTAG", "onUnityAdsAdLoaded" +placementId);
-                        UnityAds.show(activity, AD_Interstitial_ID, new UnityAdsShowOptions(), showListener);
+                        UnityAds.show(activity, unity.getInterstitial_id(), new UnityAdsShowOptions(), showListener);
                     }
                     @Override
                     public void onUnityAdsFailedToLoad(String placementId, UnityAds.UnityAdsLoadError error, String message) {
@@ -151,11 +152,11 @@ public class UnityMyAds implements IUnityAdsInitializationListener {
             }
         };
 
-        UnityAds.load(AD_Rewarded_ID, new IUnityAdsLoadListener() {
+        UnityAds.load(unity.getRewarded_id(), new IUnityAdsLoadListener() {
             @Override
             public void onUnityAdsAdLoaded(String placementId) {
                 Log.e("Rewarded", "onUnityAdsAdLoaded" +placementId);
-                UnityAds.show(activity, AD_Rewarded_ID, new UnityAdsShowOptions(), showListener);
+                UnityAds.show(activity, unity.getRewarded_id(), new UnityAdsShowOptions(), showListener);
             }
 
             @Override

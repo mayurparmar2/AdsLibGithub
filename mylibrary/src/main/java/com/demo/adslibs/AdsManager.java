@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -21,7 +21,7 @@ import com.ads.adslib.R;
 
 
 public class AdsManager {
-    private Activity context;
+    private Activity activity;
     private RelativeLayout adContainer;
 
     AdMobAds adMobAds;
@@ -31,15 +31,16 @@ public class AdsManager {
 
 
     public AdsManager(Activity context, RelativeLayout adContainer) {
-        this.context = context;
+        this.activity = context;
         this.adContainer = adContainer;
         adRefreshHandler = new Handler();
     }
 
     public void initializeAds(Activity activity) {
-        if(Utils.adsData.getEnable()){
-            switch (Utils.adsData.getAdPlatform()) {
-                case "AdMobAds":
+
+        if(Utils.getAdsData().getAds().getEnable()){
+            switch (Utils.getAdsData().getAds().getMain_ads()) {
+                case "admob":
                     adMobAds=new AdMobAds(activity);
                     break;
                 case "facebook":
@@ -54,10 +55,10 @@ public class AdsManager {
         }
     }
     public void showInterstitialAd(Activity activity) {
-        if(Utils.adsData.getEnable()){
-            switch (Utils.adsData.getAdPlatform()) {
-                case "AdMobAds":
-                    new AdMobAds(context).Interstitial_Show_Counter(activity);
+        if(Utils.getAdsData().getAds().getEnable()){
+            switch (Utils.getAdsData().getAds().getMain_ads()) {
+                case "admob":
+                    new AdMobAds(activity).Interstitial_Show_Counter(activity);
                     // Handle interstitial ad for AdMob
                     break;
                 case "facebook":
@@ -72,16 +73,16 @@ public class AdsManager {
         }
     }
     public void loadBannerAd() {
-        if(Utils.adsData.getEnable()){
-            switch (Utils.adsData.getAdPlatform()) {
-                case "AdMobAds":
-                    adMobAds.Banner_Show(adContainer, context);
+        if(Utils.getAdsData().getAds().getEnable()){
+            switch (Utils.getAdsData().getAds().getMain_ads()) {
+                case "admob":
+                    adMobAds.Banner_Show(adContainer, activity);
                     break;
                 case "facebook":
-                    facebookAds.Banner_Show(adContainer,context);
+                    facebookAds.Banner_Show(adContainer,activity);
                     break;
                 case "unity":
-                    unityAds.Banner_Show(adContainer,context);
+                    unityAds.Banner_Show(adContainer,activity);
                     break;
                 // Add cases for other platforms if needed
             }
@@ -89,10 +90,10 @@ public class AdsManager {
     }
 
     public void loadNativeAd(FrameLayout layout) {
-        if(Utils.adsData.getEnable()){
-            switch (Utils.adsData.getAdPlatform()) {
-                case "AdMobAds":
-                    adMobAds.loadAdMobNativeAd(layout,context);
+        if(Utils.getAdsData().getAds().getEnable()){
+            switch (Utils.getAdsData().getAds().getMain_ads()) {
+                case "admob":
+                    adMobAds.loadAdMobNativeAd(layout,activity);
                     break;
                 case "facebook":
 //                new FacebookAds().loadNativeAd();

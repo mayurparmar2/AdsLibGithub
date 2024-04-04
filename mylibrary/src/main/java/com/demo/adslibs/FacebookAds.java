@@ -1,4 +1,4 @@
-package com.demo.adslib;
+package com.demo.adslibs;
 
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -23,8 +23,12 @@ import com.facebook.ads.NativeAdListener;
 public class FacebookAds {
     private String TAG = "FacebookAds";
     private  final String Counter_Ads = "Counter_Ads";
-    public static String AD_Banner_ID = "IMG_16_9_LINK";
-    public static String AD_Interstitial_ID = "VID_HD_9_16_39S_LINK";
+
+
+//    public static String AD_Banner_ID = "IMG_16_9_LINK";
+    public static String AD_Banner_ID = "2818499954954555_2818511074953443";
+//    public static String AD_Interstitial_ID = "VID_HD_9_16_39S_LINK";
+    public static String AD_Interstitial_ID = "2818499954954555_2818511381620079";
     public static InterstitialAd interstitialAd;
     static ProgressDialog mDialog;
     public FacebookAds(Context activity) {
