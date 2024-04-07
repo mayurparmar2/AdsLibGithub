@@ -1,4 +1,4 @@
-package com.demo.adslibs.DataModel
+package com.demo.adslibss.DataModel
 
 data class AdsUnitId(
     val admob: Admob,

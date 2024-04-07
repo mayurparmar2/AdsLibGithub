@@ -7,7 +7,7 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion 33
     defaultConfig {
-        applicationId "com.demo.adslibs"
+        applicationId "com.demo.adslibss"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 1

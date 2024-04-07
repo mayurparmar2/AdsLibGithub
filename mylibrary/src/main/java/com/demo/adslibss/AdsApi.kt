@@ -1,6 +1,6 @@
-package com.demo.adslibs
+package com.demo.adslibss
 
-import com.demo.adslibs.DataModel.AdsData
+import com.demo.adslibss.DataModel.AdsData
 import retrofit2.Call
 import retrofit2.http.GET
 import retrofit2.http.Url

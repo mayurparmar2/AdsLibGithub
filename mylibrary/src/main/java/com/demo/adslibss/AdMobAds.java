@@ -1,4 +1,4 @@
-package com.demo.adslibs;
+package com.demo.adslibss;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;

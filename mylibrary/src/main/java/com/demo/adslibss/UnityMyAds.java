@@ -1,4 +1,4 @@
-package com.demo.adslibs;
+package com.demo.adslibss;
 
 import android.app.Activity;
 import android.content.Context;
@@ -6,7 +6,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.RelativeLayout;
 
-import com.demo.adslibs.DataModel.Unity;
+import com.demo.adslibss.DataModel.Unity;
 import com.unity3d.ads.IUnityAdsInitializationListener;
 import com.unity3d.ads.IUnityAdsLoadListener;
 import com.unity3d.ads.IUnityAdsShowListener;

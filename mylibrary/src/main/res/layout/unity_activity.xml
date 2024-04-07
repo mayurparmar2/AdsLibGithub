@@ -9,7 +9,6 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/banner1"
 
         >
 
@@ -30,24 +29,28 @@
 
     </RelativeLayout>
 
-
-
-
-    <RelativeLayout
-        android:id="@+id/banner1"
+    <com.demo.adslibss.mylib.view.BannerAdView
+        android:id="@+id/banner_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:gravity="center">
+        android:layout_alignParentBottom="true" />
 
-        <RelativeLayout
-            android:id="@+id/banner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_gravity="center"
-            android:gravity="center" />
-    </RelativeLayout>
+
+<!--    <RelativeLayout-->
+<!--        android:id="@+id/banner1"-->
+<!--        android:layout_width="match_parent"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:layout_alignParentBottom="true"-->
+<!--        android:gravity="center">-->
+
+<!--        <RelativeLayout-->
+<!--            android:id="@+id/banner"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content"-->
+<!--            android:layout_centerHorizontal="true"-->
+<!--            android:layout_gravity="center"-->
+<!--            android:gravity="center" />-->
+<!--    </RelativeLayout>-->
 
 
 

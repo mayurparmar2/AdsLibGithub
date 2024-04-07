@@ -1,4 +1,4 @@
-package com.demo.adslibs;
+package com.demo.adslibss;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
@@ -34,6 +34,8 @@ public class AdsManager {
         this.activity = context;
         this.adContainer = adContainer;
         adRefreshHandler = new Handler();
+
+
     }
 
     public void initializeAds(Activity activity) {

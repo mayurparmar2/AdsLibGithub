@@ -1,11 +1,11 @@
-package com.demo.adslibs;
+package com.demo.adslibss;
 
 import android.app.Application;
 import android.content.Context;
 
 import androidx.annotation.NonNull;
 
-import com.demo.adslibs.DataModel.AdsData;
+import com.demo.adslibss.DataModel.AdsData;
 
 public class App extends Application {
     public static final String TAG = "App";
@@ -19,7 +19,7 @@ public class App extends Application {
         context = getApplicationContext();
         mInstance = this;
 
-        Utils.UpdateTask("/AdsCC/config.json",new Utils.OnAdsJsonLoadListener(){
+        Utils.UpdateTask("/AdsCC/testConfig.json",new Utils.OnAdsJsonLoadListener(){
             @Override
             public void onFailure(@NonNull Throwable th) {
                 isLoaded =true;

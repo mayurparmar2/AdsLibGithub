@@ -1,4 +1,4 @@
-package com.demo.adslibs
+package com.demo.adslibss
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
