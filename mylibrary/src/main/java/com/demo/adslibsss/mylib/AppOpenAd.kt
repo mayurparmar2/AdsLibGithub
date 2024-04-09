@@ -30,7 +30,7 @@ class AppOpenAd {
 
     class Builder(activity: Activity) {
         private val activity: Activity
-        private var adStatus = ""
+        private var adStatus = true
         private var adNetwork = "google_ad_manager"
         private var backupAdNetwork = "admob"
         private var adMobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
@@ -61,7 +61,7 @@ class AppOpenAd {
             return this
         }
 
-        fun setAdStatus(adStatus: String): Builder {
+        fun setAdStatus(adStatus: Boolean): Builder {
             this.adStatus = adStatus
             return this
         }
@@ -87,7 +87,7 @@ class AppOpenAd {
         }
         fun destroyOpenAd() {
             isAppOpenAdLoaded = false
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 when (adNetwork) {
                     ADMOB-> if (appOpenAd != null) {
                         appOpenAd = null
@@ -101,7 +101,7 @@ class AppOpenAd {
 
 
         fun loadAppOpenAd() {
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 when (adNetwork) {
                     ADMOB, FAN_BIDDING_ADMOB -> {
                         val adRequest = AdRequest.Builder().build()
@@ -144,7 +144,7 @@ class AppOpenAd {
 
         //main ads
         fun loadAppOpenAd(onShowAdCompleteListener: OnShowAdCompleteListener) {
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 when (adNetwork) {
                     ADMOB, FAN_BIDDING_ADMOB -> {
                         val adRequest = AdRequest.Builder().build()
@@ -242,7 +242,7 @@ class AppOpenAd {
         }
 
         fun loadBackupAppOpenAd() {
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 when (backupAdNetwork) {
                     ADMOB, FAN_BIDDING_ADMOB -> {
                         val adRequest = AdRequest.Builder().build()
@@ -310,7 +310,7 @@ class AppOpenAd {
 
         //backup ads
         fun loadBackupAppOpenAd(onShowAdCompleteListener: OnShowAdCompleteListener) {
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 when (backupAdNetwork) {
                     ADMOB, FAN_BIDDING_ADMOB -> {
                         val adRequest = AdRequest.Builder().build()

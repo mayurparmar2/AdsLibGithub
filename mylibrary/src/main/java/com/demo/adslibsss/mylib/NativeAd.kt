@@ -41,7 +41,7 @@ class NativeAd {
         lateinit var admobNativeBackground: LinearLayout
         lateinit var mediaView: com.google.android.gms.ads.nativead.MediaView
 
-        private var adStatus = ""
+        private var adStatus = true
         private var adNetwork = "facebook"
         private var backupAdNetwork = "admob"
         private var adMobNativeId = "ca-app-pub-3940256099942544/2247696110"
@@ -55,7 +55,7 @@ class NativeAd {
         private var darkTheme = false
         private val legacyGDPR = false
 
-        fun setAdStatus(adStatus: String): NativeAd.Builder {
+        fun setAdStatus(adStatus: Boolean): NativeAd.Builder {
             this.adStatus = adStatus
             return this
         }
@@ -107,7 +107,7 @@ class NativeAd {
         }
 
         fun loadNativeAd() {
-            if (adStatus == AD_STATUS_ON) {
+            if (adStatus) {
                 admobNativeAd = activity.findViewById(R.id.admob_native_ad_container)
                 mediaView = activity.findViewById(R.id.media_view)
                 fanNativeAdLayout = activity.findViewById<NativeAdLayout>(R.id.fan_native_ad_container)

@@ -17,7 +17,7 @@ public class AdNetwork {
 
 
     class Initialize(var activity: Activity) {
-        private var adStatus = ""
+        private var adStatus = true
         private var adNetwork = ""
         private var backupAdNetwork = ""
         private var adMobAppId = ""
@@ -33,7 +33,7 @@ public class AdNetwork {
             return this
         }
 
-        fun setAdStatus(adStatus: String): Initialize {
+        fun setAdStatus(adStatus: Boolean): Initialize {
             this.adStatus = adStatus
             return this
         }
@@ -60,7 +60,7 @@ public class AdNetwork {
         }
 
         fun initAds() {
-            if (adStatus == Constant.AD_STATUS_ON) {
+            if (adStatus) {
                 when (adNetwork) {
                     Constant.ADMOB ->{
                         MobileAds.initialize(activity) {
@@ -91,7 +91,7 @@ public class AdNetwork {
         }
 
         fun initBackupAds() {
-            if (adStatus == Constant.AD_STATUS_ON) {
+            if (adStatus) {
                 when (backupAdNetwork) {
                     Constant.ADMOB ->{
                         MobileAds.initialize(activity) {

@@ -35,7 +35,7 @@ class BannerAd{
 //        private var adManagerAdView: AdManagerAdView? = null
 
         private var fanAdView: com.facebook.ads.AdView? = null
-        private var adStatus = ""
+        private var adStatus = true
         private var adNetwork = ""
         private var backupAdNetwork = ""
         private var adMobBannerId = ""
@@ -54,7 +54,7 @@ class BannerAd{
             return this
         }
 
-        fun setAdStatus(adStatus: String): Builder {
+        fun setAdStatus(adStatus: Boolean): Builder {
             this.adStatus = adStatus
             return this
         }
@@ -84,7 +84,7 @@ class BannerAd{
             return this
         }
         fun loadBannerAd() {
-            if (adStatus == "AD_STATUS_ON") {
+            if (adStatus) {
                 when (adNetwork) {
                     Constant.ADMOB->{
                         val adContainerView = activity.findViewById<FrameLayout>(R.id.admob_banner_view_container)
@@ -167,7 +167,7 @@ class BannerAd{
         }
 
         fun loadBackupBannerAd() {
-            if (adStatus == "AD_STATUS_ON") {
+            if (adStatus) {
                 when (backupAdNetwork) {
                     Constant.ADMOB->{
                         val adContainerView = activity.findViewById<FrameLayout>(R.id.admob_banner_view_container)

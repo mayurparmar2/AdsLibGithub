@@ -19,6 +19,7 @@ import com.unity3d.ads.UnityAds.UnityAdsShowCompletionState
 import com.unity3d.ads.UnityAds.UnityAdsShowError
 import com.unity3d.ads.UnityAdsShowOptions
 import java.util.Locale
+import java.util.Objects
 
 
 class MyInterstitialAd private constructor(private val activity: Activity) {
@@ -35,11 +36,20 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
     }
 
     class Builder(private val activity: Activity) {
-        private var isUnityLoaded: Boolean = false
+
+//        val showUnityLoadListener:UnityLoadListener = object :UnityLoadListener{
+//            override fun UnityLoad() {
+//            }
+//        }
+//
+//        interface UnityLoadListener{
+//            fun UnityLoad()
+//        }
+//
         private var counter = 1
         private var interval = 3
 
-        private var adStatus = ""
+        private var adStatus = true
         private var adNetwork = ""
         private var backupAdNetwork = ""
 
@@ -51,7 +61,7 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
         private var adMobInterstitialAd: InterstitialAd? = null
         private var fanInterstitialAd: com.facebook.ads.InterstitialAd? = null
 
-        fun setAdStatus(adStatus: String): Builder {
+        fun setAdStatus(adStatus: Boolean): Builder {
             this.adStatus = adStatus
             return this
         }
@@ -95,7 +105,7 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
 
 
         private fun loadInterstitialAd() {
-            if (adStatus == "AD_STATUS_ON") {
+            if (adStatus) {
                 when (adNetwork) {
                     Constant.ADMOB -> {
                         val adRequest = AdRequest.Builder().build()
@@ -178,7 +188,7 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
         }
 
         private fun loadBackupInterstitialAd() {
-            if (adStatus == "AD_STATUS_ON") {
+            if (adStatus) {
                 when (backupAdNetwork) {
                     Constant.ADMOB -> {
                         val adRequest = AdRequest.Builder().build()
@@ -234,7 +244,6 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
                     Constant.UNITY -> {
                         unityAdsLoadListener = object : IUnityAdsLoadListener {
                             override fun onUnityAdsAdLoaded(placementId: String) {
-                                isUnityLoaded = true
                                 Log.e(TAG, "unity interstitial ad loaded")
                             }
 
@@ -259,7 +268,7 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
 
 
         private fun showInterstitialAd() {
-            if (adStatus != Constant.AD_STATUS_ON) {
+            if (!adStatus) {
                 return
             }
             if (counter == interval) {
@@ -286,20 +295,22 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
                     Constant.UNITY -> {
                         val showListener: IUnityAdsShowListener = object : IUnityAdsShowListener {
                             override fun onUnityAdsShowFailure(placementId: String, error: UnityAdsShowError, message: String) {
-                                Log.d(TAG, "unity ads show failure")
+                                Log.e(TAG, "unity ads show failure")
+
                                 showBackupInterstitialAd()
                             }
                             override fun onUnityAdsShowStart(placementId: String) {}
                             override fun onUnityAdsShowClick(placementId: String) {}
                             override fun onUnityAdsShowComplete(placementId: String, state: UnityAdsShowCompletionState) {
                                 loadInterstitialAd()
-                                isUnityLoaded = false
                             }
                         }
                         try {
-                            if(isUnityLoaded) {
+//                            if(isUnityLoaded) {
                                 UnityAds.show(activity, unityInterstitialId, UnityAdsShowOptions(), showListener)
-                            }
+//                            } else {
+//                                showBackupInterstitialAd()
+//                            }
                         }catch (e:Exception){
                             Log.e(TAG, "Exception: showBackupInterstitialAd(): UNITY :  $e")
                         }
@@ -313,20 +324,20 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
         }
 
         private fun showBackupInterstitialAd() {
-            if (adStatus != Constant.AD_STATUS_ON) {
+            if (!adStatus) {
                 return
             }
             Log.e(TAG, "Show Backup Interstitial Ad [" + backupAdNetwork.uppercase(Locale.getDefault()) + "]")
             when (backupAdNetwork) {
                 Constant.ADMOB -> {
                     adMobInterstitialAd?.apply {
-                        show(activity)
+                        adMobInterstitialAd?.show(activity)
                     }
                 }
 
                 Constant.FACEBOOK -> {
                     fanInterstitialAd?.isAdLoaded.apply {
-                        show()
+                        fanInterstitialAd?.show()
                     }
                 }
 
@@ -339,13 +350,12 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
                         override fun onUnityAdsShowClick(placementId: String) {}
                         override fun onUnityAdsShowComplete(placementId: String, state: UnityAdsShowCompletionState) {
                             loadInterstitialAd()
-                            isUnityLoaded = false
                         }
                     }
                     try {
-                        if(isUnityLoaded) {
+//                        if(isUnityLoaded) {
                             UnityAds.show(activity, unityInterstitialId, UnityAdsShowOptions(), showListener)
-                        }
+//                        }
                     }catch (e:Exception){
                         Log.e(TAG, "Exception: showBackupInterstitialAd(): UNITY :  $e")
                     }

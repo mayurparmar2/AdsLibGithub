@@ -17,18 +17,19 @@ class MyAdsManager(val activity: Activity) {
 
     fun initializationAd() {
         if (adsData.enable) {
-            this.adNetwork.setAdStatus(Constant.AD_STATUS_ON)
+            this.adNetwork.setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
-                    .setUnityGameId(this.adsData.ads_unit_id.unity.game_id)
-                    .setDebug(true)
+//                    .setUnityGameId(this.adsData.ads_unit_id.unity.game_id)
+                    .setUnityGameId("5331426")
+                    .setDebug(false)
                     .build()
         }
     }
 
     fun loadBannerAd() {
         if (adsData.enable) {
-            bannerAd.setAdStatus(Constant.AD_STATUS_ON)
+            bannerAd.setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
                     .setAdMobBannerId(this.adsData.ads_unit_id.admob.banner_id)
@@ -42,7 +43,7 @@ class MyAdsManager(val activity: Activity) {
     @JvmOverloads
     fun loadInterAd(interval: Int = this.adsData.counter) {
         if (adsData.enable) {
-            this.interstitialAd.setAdStatus(Constant.AD_STATUS_ON)
+            this.interstitialAd.setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
                     .setAdMobInterstitialId(this.adsData.ads_unit_id.admob.interstitial_id)
@@ -61,7 +62,7 @@ class MyAdsManager(val activity: Activity) {
 
     fun loadNativeAdView(nativeAdViewContainer: ViewGroup) {
         if (adsData.enable) {
-            this.nativeAd.setAdStatus(Constant.AD_STATUS_ON)
+            this.nativeAd.setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
                     .setAdMobNativeId(this.adsData.ads_unit_id.admob.native_id)
@@ -75,7 +76,7 @@ class MyAdsManager(val activity: Activity) {
     fun loadOpenAds() {
 //        if (Constant.OPEN_ADS_ON_START) {
             appOpenAdBuilder = AppOpenAd.Builder(activity)
-                    .setAdStatus(Constant.AD_STATUS_ON)
+                    .setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
                     .setAdMobAppOpenId(Constant.ADMOB_APP_OPEN_AD_ID)
