@@ -100,8 +100,6 @@ public class MainActivity extends AppCompatActivity {
         ProcessLifecycleOwner.get().getLifecycle().addObserver(lifecycleObserver);
     }
 
-
-
     @Override
     protected void onDestroy() {
         super.onDestroy();

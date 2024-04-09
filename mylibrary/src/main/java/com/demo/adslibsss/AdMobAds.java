@@ -274,48 +274,5 @@ public class AdMobAds {
         }
     }
 
-//    public void loadAdMobNativeAd(RelativeLayout relativeLayout, Context context) {
-//        AdLoader adLoader = new AdLoader.Builder(context, AD_MANAGER_AD_UNIT_ID)
-//                .forNativeAd(nativeAd -> {
-//                    // Handle the loaded native ad
-//                    NativeAdView adView = (NativeAdView) ((Activity) context).getLayoutInflater()
-//                            .inflate(R.layout.admob_native_ad_template, null);
-//
-//                    // Set the ad components
-//                    adView.setHeadlineView(adView.findViewById(R.id.ad_headline));
-//                    adView.setBodyView(adView.findViewById(R.id.ad_body));
-//                    adView.setMediaView((MediaView) adView.findViewById(R.id.ad_media));
-//                    adView.setCallToActionView(adView.findViewById(R.id.ad_call_to_action));
-//                    adView.setIconView(adView.findViewById(R.id.ad_icon));
-//                    adView.setAdChoicesView((AdChoicesView) adView.findViewById(R.id.ad_choices));
-//
-//                    // Populate the ad data
-//                    ((TextView) adView.getHeadlineView()).setText(nativeAd.getHeadline());
-//                    ((TextView) adView.getBodyView()).setText(nativeAd.getBody());
-//                    ((Button) adView.getCallToActionView()).setText(nativeAd.getCallToAction());
-//
-//                    NativeAd.Image icon = nativeAd.getIcon();
-//                    if (icon != null) {
-//                        ((ImageView) adView.getIconView()).setImageDrawable(icon.getDrawable());
-//                    }
-//
-//                    MediaView mediaView = adView.getMediaView();
-//                    if (mediaView != null) {
-//                        mediaView.setMediaContent(nativeAd.getMediaContent());
-//                    }
-//
-//                    // Register the ad view with the native ad
-//                    adView.setNativeAd(nativeAd);
-//
-//                    // Add the ad view to the RelativeLayout
-//                    relativeLayout.removeAllViews();
-//                    relativeLayout.addView(adView);
-//                })
-//                .withNativeAdOptions(new NativeAdOptions.Builder().build())
-//                .build();
-//
-//        adLoader.loadAd(new AdRequest.Builder().build());
-//    }
-
 
 }

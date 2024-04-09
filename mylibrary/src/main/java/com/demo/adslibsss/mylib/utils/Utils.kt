@@ -27,7 +27,7 @@ class Utils {
     }
     companion object{
         @JvmStatic
-        var adsData: AdsData = AdsData(ads = Ads(AdsUnitId(Admob(), Facebook(), Unity()),"facebook",3,"admob",false))
+        var adsData: AdsData = AdsData(ads = Ads(AdsUnitId(Admob(), Facebook(), Unity()),"facebook","https://www.google.com",3,"admob",false))
         @JvmStatic
         fun UpdateTask(path : String,listener: OnAdsJsonLoadListener){
             val adsApi = RetrofitHalper.getInstance().create(AdsApi::class.java)
