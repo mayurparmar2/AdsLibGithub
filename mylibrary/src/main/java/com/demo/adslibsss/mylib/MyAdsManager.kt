@@ -20,8 +20,8 @@ class MyAdsManager(val activity: Activity) {
             this.adNetwork.setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
                     .setBackupAdNetwork(this.adsData.backup_ads)
-//                    .setUnityGameId(this.adsData.ads_unit_id.unity.game_id)
-                    .setUnityGameId("5331426")
+                    .setUnityGameId(this.adsData.ads_unit_id.unity.game_id)
+//                    .setUnityGameId("5331426")
                     .setDebug(false)
                     .build()
         }
@@ -73,8 +73,9 @@ class MyAdsManager(val activity: Activity) {
         }
     }
 
-    fun loadOpenAds() {
-//        if (Constant.OPEN_ADS_ON_START) {
+    @JvmOverloads
+    fun loadOpenAds(callback: () -> Unit) {
+        if (adsData.enable) {
             appOpenAdBuilder = AppOpenAd.Builder(activity)
                     .setAdStatus(this.adsData.enable)
                     .setAdNetwork(this.adsData.main_ads)
@@ -82,11 +83,13 @@ class MyAdsManager(val activity: Activity) {
                     .setAdMobAppOpenId(Constant.ADMOB_APP_OPEN_AD_ID)
                     .setAdManagerAppOpenId(Constant.GOOGLE_AD_MANAGER_APP_OPEN_AD_ID)
                     .build {
+                        callback()
 //                        this.startMainActivity()
-
                     }
-//        }
+        }
     }
+
+
     companion object{
 
     }

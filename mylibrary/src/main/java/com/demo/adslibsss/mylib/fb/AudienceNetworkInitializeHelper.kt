@@ -6,7 +6,6 @@ import com.facebook.ads.AdSettings
 import com.facebook.ads.AudienceNetworkAds
 import com.facebook.ads.AudienceNetworkAds.InitListener
 import com.facebook.ads.AudienceNetworkAds.InitResult
-
 class AudienceNetworkInitializeHelper : InitListener {
     override fun onInitialized(initResult: InitResult) {
         Log.d(AudienceNetworkAds.TAG, initResult.message)
@@ -25,7 +24,7 @@ class AudienceNetworkInitializeHelper : InitListener {
             }
             if (debug) {
                 AdSettings.turnOnSDKDebugger(context)
-                AdSettings.setTestMode(true)
+                AdSettings.setTestMode(debug)
                 AdSettings.setIntegrationErrorMode(AdSettings.IntegrationErrorMode.INTEGRATION_ERROR_CRASH_DEBUG_MODE)
             }
             AudienceNetworkAds.buildInitSettings(context).withInitListener(AudienceNetworkInitializeHelper()).initialize()

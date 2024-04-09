@@ -63,6 +63,7 @@ public class MainActivity extends AppCompatActivity {
             } else {
                 showToast("No internet connection");
             }
+            return null;
         });
         reloadAds();
         IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
@@ -96,9 +97,15 @@ public class MainActivity extends AppCompatActivity {
         adsManager.loadNativeAdView(nativeAdViewContainer);
 
         //appOpen
-        adsManager.loadOpenAds();
+        adsManager.loadOpenAds(() -> {
+            Log.e("TAG", "initAds:12345  " );
+
+            return null;
+        });
         ProcessLifecycleOwner.get().getLifecycle().addObserver(lifecycleObserver);
     }
+
+
 
     @Override
     protected void onDestroy() {

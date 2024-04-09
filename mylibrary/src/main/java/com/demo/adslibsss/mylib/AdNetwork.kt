@@ -12,7 +12,7 @@ import com.unity3d.ads.UnityAds.UnityAdsInitializationError
 
 public class AdNetwork {
     companion object{
-        private const val TAG = "AdNetwork"
+        private const val TAG = "AdNetwork.class"
     }
 
 
