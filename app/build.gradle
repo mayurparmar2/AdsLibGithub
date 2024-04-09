@@ -7,7 +7,7 @@ apply plugin: 'kotlin-android'
 android {
     compileSdkVersion 33
     defaultConfig {
-        applicationId "com.demo.adslibss"
+        applicationId "com.demo.adslibsss"
         minSdkVersion 21
         targetSdkVersion 33
         versionCode 1
@@ -83,6 +83,7 @@ dependencies {
 
 
     implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-//    implementation 'com.github.mayurparmar2:AdsLibGithub:1.2'
+
+    implementation 'androidx.lifecycle:lifecycle-process:2.5.1'
 
 }

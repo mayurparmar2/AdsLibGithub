@@ -20,16 +20,19 @@
             android:layout_marginHorizontal="20dp"
             android:text="Show Interstitial" />
 
-        <FrameLayout
-            android:id="@+id/mm1"
+        <LinearLayout
+            android:id="@+id/native_ad"
             android:layout_below="@id/showInterstitial"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp" />
+            android:orientation="vertical" />
 
     </RelativeLayout>
 
-    <com.demo.adslibss.mylib.view.BannerAdView
+
+
+
+    <com.demo.adslibsss.mylib.view.BannerAdView
         android:id="@+id/banner_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

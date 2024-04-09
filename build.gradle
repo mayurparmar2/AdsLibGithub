@@ -7,61 +7,6 @@ ext.kotlin_version = '1.7.0'
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath 'com.android.tools.build:gradle:7.3.1'
-
-        //=> UnsupportedOperationException("M
-        //=> System.loadLibrar
-
-
-        /* new_string Comments */
-
-         //Select all tag=    <(\w+)([^>]*)>(.*?)<\/\1>
-         //Select specific val=    <(\w+)\s+[^>]*name="common_google_play_[^"]*"[^>]*>(.*?)<\/\1>
-        //=>                  \/\*([\s\S]*?\*\/)
-        //=>                  \/\/.*
-
-        /* Replace */
-
-        // From =>  setVisibility(View.VISIBLE);   => setVisibility(View.VISIBLE);
-        // From =>  setVisibility(View.GONE);  =>setVisibility(View.GONE);
-
-        /* Replace xml */
-
-        // From =>    :layout_collapseMode="2"  =>    name="none" value="0",name="pin" value="1",name="parallax" value="2"
-        // From =>    Of="parent" => Of="parent"
-        // From =>     =>
-        // From =>     =>
-        // From =>     =>
-        // From =>     =>
-        // From =>     =>
-        // From =>  16973940   => android.R.style.Theme_Holo_Light_Dialog_MinWidth
-
-
-        // chack is exist From => getResources().getIdentifier(draw, "id", "your_package_name");
-        // permission From use a package =>  <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES  />
-        // signingReport =>  google : signingReport
-        // getUriForFile =>  Uri fileProvider = FileProvider.getUriForFile(getContext(), "com.codepath.fileprovider", photoFile);
-
-
-
-
-
-// Rename:=>
-      // mv app/src/main/res/drawable/old_drawable.png app/src/main/res/drawable/new_drawable.png
-      // Get-ChildItem -Recurse -Filter "*.java" | ForEach-Object { (Get-Content $_.FullName) -replace 'old_drawable', 'new_drawable' | Set-Content $_.FullName }
-      
-      //========>
-      //  Get-ChildItem -Recurse -Filter "*.java" | ForEach-Object {
-      //     $content = Get-Content $_.FullName
-     //      $newContent = $content -replace 'R.drawable.(.*?)(?=\W)', { R.drawable.$1new }
-     //      $newContent | Set-Content $_.FullName
-     //    }
-      
-
-
-//        Drawable d = getResources().getDrawable(android.R.drawable.drawable);
-        /*set Drawable Tint Color */
-//        Drawable setting = DrawableCompat.wrap(getResources().getDrawable(R.drawable.setting));
-//        DrawableCompat.setTint(home, ContextCompat.getColor(context, R.color.white));
     }
 }
 
