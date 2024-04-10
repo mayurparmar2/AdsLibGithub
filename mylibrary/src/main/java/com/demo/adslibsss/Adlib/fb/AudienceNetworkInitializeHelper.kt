@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib.fb
+package com.demo.adslibsss.Adlib.fb
 
 import android.content.Context
 import android.util.Log

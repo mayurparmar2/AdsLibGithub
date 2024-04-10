@@ -18,15 +18,14 @@ import androidx.lifecycle.LifecycleObserver;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ProcessLifecycleOwner;
 
-import com.demo.adslibsss.DataModel.AdsData;
-import com.demo.adslibsss.mylib.AppOpenAd;
-import com.demo.adslibsss.mylib.Constant;
-import com.demo.adslibsss.mylib.MyAdsManager;
-import com.demo.adslibsss.mylib.utils.Utils;
+import com.demo.adslibsss.abstracts.AdActivity;
+import com.demo.adslibsss.Adlib.AppOpenAd;
+import com.demo.adslibsss.Adlib.Constant;
+import com.demo.adslibsss.abstracts.AdApplication;
+import com.demo.adslibsss.network.InternetReceiver;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AdActivity {
     private LinearLayout nativeAdViewContainer;
-    private InternetReceiver internetReceiver;
     MyAdsManager adsManager;
     AppOpenAd.Builder appOpenAdBuilder;
     LifecycleObserver lifecycleObserver = new DefaultLifecycleObserver() {
@@ -42,49 +41,19 @@ public class MainActivity extends AppCompatActivity {
             }, 100);
         }
     };
+    private InternetReceiver internetReceiver;
 
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.unity_activity);
         Button button = findViewById(R.id.showInterstitial);
         button.setOnClickListener(v -> {
-            if(adsManager!=null){
+            if (adsManager != null) {
                 adsManager.showInterAd();
             }
         });
         Log.e("MTAG", "onCreate" + nativeAdViewContainer);
-
-
-
-        internetReceiver = new InternetReceiver(isConnected -> {
-            if (isConnected) {
-                reloadAds();
-                showToast("Internet is connected");
-            } else {
-                showToast("No internet connection");
-            }
-            return null;
-        });
-        reloadAds();
-        IntentFilter filter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION);
-        registerReceiver(internetReceiver, filter);
     }
-    protected void reloadAds(){
-        if(App.isLoaded){
-            initAds();
-        }else {
-            Utils.UpdateTask("/AdsCC/testConfig.json",new Utils.OnAdsJsonLoadListener() {
-                @Override
-                public void onLoaded(@NonNull AdsData adsData) {
-                    initAds();
-                }
-                @Override
-                public void onFailure(@NonNull Throwable th) {
-                }
-            });
-        }
-    }
-
     private void initAds() {
         adsManager = new MyAdsManager(MainActivity.this);
         adsManager.initializationAd();
@@ -95,26 +64,37 @@ public class MainActivity extends AppCompatActivity {
 //        Tools.setNativeAdStyle(this, nativeAdViewContainer, medium);
 //        Tools.setNativeAdStyle(nativeAdViewContainer)
         adsManager.loadNativeAdView(nativeAdViewContainer);
-
         //appOpen
         adsManager.loadOpenAds(() -> {
-            Log.e("TAG", "initAds:12345  " );
+            Log.e("TAG", "initAds:12345  ");
 
             return null;
         });
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(lifecycleObserver);
     }
-
 
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(internetReceiver);
+//        unregisterReceiver(internetReceiver);
         ProcessLifecycleOwner.get().getLifecycle().removeObserver(lifecycleObserver);
-
     }
+
     private void showToast(String message) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
+
+    @Override
+    public void isConnected(boolean isConnected) {
+        if (isConnected) {
+            AdApplication.loadedAdsJson(adsData -> {
+                initAds();
+            });
+            showToast("Internet is connected");
+        } else {
+            showToast("No internet connection");
+        }
+    }
+
+
 }

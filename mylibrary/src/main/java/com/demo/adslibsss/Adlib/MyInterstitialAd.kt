@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 import android.app.Activity
 import android.util.Log
@@ -19,7 +19,6 @@ import com.unity3d.ads.UnityAds.UnityAdsShowCompletionState
 import com.unity3d.ads.UnityAds.UnityAdsShowError
 import com.unity3d.ads.UnityAdsShowOptions
 import java.util.Locale
-import java.util.Objects
 
 
 class MyInterstitialAd private constructor(private val activity: Activity) {
@@ -330,7 +329,7 @@ class MyInterstitialAd private constructor(private val activity: Activity) {
             Log.e(TAG, "Show Backup Interstitial Ad [" + backupAdNetwork.uppercase(Locale.getDefault()) + "]")
             when (backupAdNetwork) {
                 Constant.ADMOB -> {
-                    adMobInterstitialAd?.apply {
+                    adMobInterstitialAd?.let {
                         adMobInterstitialAd?.show(activity)
                     }
                 }

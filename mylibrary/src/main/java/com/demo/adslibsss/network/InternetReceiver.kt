@@ -1,11 +1,11 @@
-package com.demo.adslibsss
+package com.demo.adslibsss.network
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.ConnectivityManager
 
-class InternetReceiver(val callback:(Boolean) -> Unit) : BroadcastReceiver() {
+class InternetReceiver(val callback: (Boolean) -> Unit) : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         callback(isConnected(context))
     }

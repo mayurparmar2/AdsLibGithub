@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib.utils;
+package com.demo.adslibsss.Adlib.utils;
 
 public interface OnShowAdCompleteListener {
     void onShowAdComplete();

@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 import android.app.Activity
 import android.graphics.drawable.ColorDrawable
@@ -13,10 +13,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.content.ContextCompat
 import com.ads.adslib.R
-import com.demo.adslibsss.mylib.Constant.AD_STATUS_ON
-import com.demo.adslibsss.mylib.utils.NativeTemplateStyle
-import com.demo.adslibsss.mylib.utils.Tools
-import com.demo.adslibsss.mylib.view.TemplateView
+import com.demo.adslibsss.Adlib.utils.NativeTemplateStyle
+import com.demo.adslibsss.Adlib.utils.Tools
+import com.demo.adslibsss.Adlib.view.TemplateView
 import com.facebook.ads.Ad
 import com.facebook.ads.AdError
 import com.facebook.ads.AdOptionsView
@@ -115,9 +114,48 @@ class NativeAd {
                 admobNativeBackground = activity.findViewById<LinearLayout>(R.id.background)
                 when (adNetwork) {
 
-
+                    Constant.UNITY -> {
+                        loadBackupNativeAd()
+                    }
                     Constant.ADMOB -> {
+                        if (admobNativeAd.getVisibility() != View.VISIBLE) {
+//                        val adMobNativeId = "/6499/example/native"
 
+                            val adLoader = AdLoader.Builder(activity, adMobNativeId)
+                                .forNativeAd { NativeAd: com.google.android.gms.ads.nativead.NativeAd? ->
+                                    if (darkTheme) {
+                                        val colorDrawable = ColorDrawable(ContextCompat.getColor(activity, nativeBackgroundDark))
+                                        val styles: NativeTemplateStyle = NativeTemplateStyle.Builder().withMainBackgroundColor(colorDrawable).build()
+                                        admobNativeAd.setStyles(styles)
+                                        admobNativeBackground.setBackgroundResource(nativeBackgroundDark)
+                                    } else {
+                                        val colorDrawable = ColorDrawable(ContextCompat.getColor(activity, nativeBackgroundLight))
+                                        val styles: NativeTemplateStyle = NativeTemplateStyle.Builder().withMainBackgroundColor(colorDrawable).build()
+                                        admobNativeAd.setStyles(styles)
+                                        admobNativeBackground.setBackgroundResource(nativeBackgroundLight)
+                                    }
+                                    mediaView.setImageScaleType(ImageView.ScaleType.CENTER_CROP)
+                                    if (NativeAd != null) {
+                                        admobNativeAd.setNativeAd(NativeAd)
+                                    }
+                                    admobNativeAd.setVisibility(View.VISIBLE)
+                                    nativeAdViewContainer.visibility = View.VISIBLE
+                                }
+                                .withAdListener(object : AdListener() {
+                                    override fun onAdFailedToLoad(adError: LoadAdError) {
+                                        Log.e(TAG, "1 AdMob onAdFailedToLoad : $adError")
+                                        loadBackupNativeAd()
+                                    }
+
+                                    override fun onAdLoaded() {
+                                        super.onAdLoaded()
+                                        Log.e(TAG, "1 AdMob onAdLoaded :")
+                                    }
+                                }).build()
+                            adLoader.loadAd(Tools.getAdRequest(activity, legacyGDPR))
+                        }else {
+                            Log.e(TAG, "AdMob Native Ad has been loaded")
+                        }
                     }
 
                     Constant.FACEBOOK -> {
@@ -125,7 +163,7 @@ class NativeAd {
                         val nativeAdListener: NativeAdListener = object : NativeAdListener {
                             override fun onMediaDownloaded(ad: Ad) {}
                             override fun onError(ad: Ad, adError: AdError) {
-                                Log.e(TAG, "loadNativeAd(): onAdLoaded:")
+                                Log.e(TAG, "loadNativeAd(): onError:"+adError.errorMessage)
 
                                 loadBackupNativeAd()
                             }
@@ -220,7 +258,7 @@ class NativeAd {
                     if (admobNativeAd.getVisibility() != View.VISIBLE) {
 //                        val adMobNativeId = "/6499/example/native"
 
-                        val adLoader = AdLoader.Builder(activity, adMobNativeId)
+                              val adLoader = AdLoader.Builder(activity, adMobNativeId)
                                 .forNativeAd { NativeAd: com.google.android.gms.ads.nativead.NativeAd? ->
                                     if (darkTheme) {
                                         val colorDrawable = ColorDrawable(ContextCompat.getColor(activity, nativeBackgroundDark))
@@ -258,7 +296,91 @@ class NativeAd {
                     }
                 }
                 Constant.FACEBOOK -> {
+                    fanNativeAd = com.facebook.ads.NativeAd(activity, fanNativeId)
+                    val nativeAdListener: NativeAdListener = object : NativeAdListener {
+                        override fun onMediaDownloaded(ad: Ad) {}
+                        override fun onError(ad: Ad, adError: AdError) {
+                            Log.e(TAG, "loadBackupNativeAd() FACEBOOK: adError:$adError")
+                            nativeAdViewContainer.visibility = View.GONE
+                            fanNativeAdLayout.visibility = View.GONE
+                        }
+                        override fun onAdLoaded(ad: Ad) {
+                            Log.e(TAG, "loadBackupNativeAd() FACEBOOK: onAdLoaded:")
 
+                            // Race condition, load() called again before last ad was displayed
+                            fanNativeAdLayout.setVisibility(View.VISIBLE)
+                            nativeAdViewContainer.setVisibility(View.VISIBLE)
+                            if (fanNativeAd !== ad) {
+                                return
+                            }
+                            // Inflate Native Ad into Container
+                            //inflateAd(nativeAd);
+                            fanNativeAd.unregisterView()
+                            // Add the Ad view into the ad container.
+                            val inflater = LayoutInflater.from(activity)
+                            // Inflate the Ad view.  The layout referenced should be the one you created in the last step.
+//                                val nativeAdView: LinearLayout
+                            val nativeAdView = when (nativeAdStyle) {
+                                Constant.STYLE_NEWS, Constant.STYLE_MEDIUM -> inflater.inflate(R.layout.gnt_fan_news_template_view, fanNativeAdLayout, false) as LinearLayout
+                                Constant.STYLE_VIDEO_SMALL -> inflater.inflate(R.layout.gnt_fan_video_small_template_view, fanNativeAdLayout, false) as LinearLayout
+                                Constant.STYLE_VIDEO_LARGE -> inflater.inflate(R.layout.gnt_fan_video_large_template_view, fanNativeAdLayout, false) as LinearLayout
+                                Constant.STYLE_RADIO, Constant.STYLE_SMALL -> inflater.inflate(R.layout.gnt_fan_radio_template_view, fanNativeAdLayout, false) as LinearLayout
+                                else -> inflater.inflate(R.layout.gnt_fan_medium_template_view, fanNativeAdLayout, false) as LinearLayout
+                            }
+                            fanNativeAdLayout.addView(nativeAdView)
+
+                            // Add the AdOptionsView
+                            val adChoicesContainer = nativeAdView.findViewById<LinearLayout>(R.id.ad_choices_container)
+                            val adOptionsView = AdOptionsView(activity, fanNativeAd, fanNativeAdLayout)
+                            adChoicesContainer.removeAllViews()
+                            adChoicesContainer.addView(adOptionsView, 0)
+
+                            // Create native UI using the ad metadata.
+                            val nativeAdTitle = nativeAdView.findViewById<TextView>(R.id.native_ad_title)
+                            val nativeAdMedia = nativeAdView.findViewById<MediaView>(R.id.native_ad_media)
+                            val nativeAdIcon = nativeAdView.findViewById<MediaView>(R.id.native_ad_icon)
+                            val nativeAdSocialContext = nativeAdView.findViewById<TextView>(R.id.native_ad_social_context)
+                            val nativeAdBody = nativeAdView.findViewById<TextView>(R.id.native_ad_body)
+                            val sponsoredLabel = nativeAdView.findViewById<TextView>(R.id.native_ad_sponsored_label)
+                            val nativeAdCallToAction = nativeAdView.findViewById<Button>(R.id.native_ad_call_to_action)
+                            val fanNativeBackground = nativeAdView.findViewById<LinearLayout>(R.id.ad_unit)
+                            if (darkTheme) {
+                                nativeAdTitle.setTextColor(ContextCompat.getColor(activity, R.color.applovin_dark_primary_text_color))
+                                nativeAdSocialContext.setTextColor(ContextCompat.getColor(activity, R.color.applovin_dark_primary_text_color))
+                                sponsoredLabel.setTextColor(ContextCompat.getColor(activity, R.color.applovin_dark_secondary_text_color))
+                                nativeAdBody.setTextColor(ContextCompat.getColor(activity, R.color.applovin_dark_secondary_text_color))
+                                fanNativeBackground.setBackgroundResource(nativeBackgroundDark)
+                            } else {
+                                fanNativeBackground.setBackgroundResource(nativeBackgroundLight)
+                            }
+
+                            // Set the Text.
+                            nativeAdTitle.setText(fanNativeAd.getAdvertiserName())
+                            nativeAdBody.setText(fanNativeAd.getAdBodyText())
+                            nativeAdSocialContext.setText(fanNativeAd.getAdSocialContext())
+                            nativeAdCallToAction.visibility = if (fanNativeAd.hasCallToAction()) View.VISIBLE else View.INVISIBLE
+                            nativeAdCallToAction.setText(fanNativeAd.getAdCallToAction())
+                            sponsoredLabel.setText(fanNativeAd.getSponsoredTranslation())
+
+                            // Create a list of clickable views
+                            val clickableViews: MutableList<View> = ArrayList()
+                            clickableViews.add(nativeAdTitle)
+                            clickableViews.add(sponsoredLabel)
+                            clickableViews.add(nativeAdIcon)
+                            clickableViews.add(nativeAdMedia)
+                            clickableViews.add(nativeAdBody)
+                            clickableViews.add(nativeAdSocialContext)
+                            clickableViews.add(nativeAdCallToAction)
+
+                            // Register the Title and CTA button to listen for clicks.
+                            fanNativeAd.registerViewForInteraction(nativeAdView, nativeAdIcon, nativeAdMedia, clickableViews)
+                        }
+                        override fun onAdClicked(ad: Ad) {}
+                        override fun onLoggingImpression(ad: Ad) {}
+                    }
+
+                    val loadAdConfig: NativeLoadAdConfig = fanNativeAd.buildLoadAdConfig().withAdListener(nativeAdListener).build()
+                    fanNativeAd.loadAd(loadAdConfig)
                 }
                 Constant.NONE -> {
                     nativeAdViewContainer.visibility = View.GONE

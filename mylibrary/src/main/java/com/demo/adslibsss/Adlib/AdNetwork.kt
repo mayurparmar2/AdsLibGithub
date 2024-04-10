@@ -1,8 +1,8 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 import android.app.Activity
 import android.util.Log
-import com.demo.adslibsss.mylib.fb.AudienceNetworkInitializeHelper
+import com.demo.adslibsss.Adlib.fb.AudienceNetworkInitializeHelper
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.initialization.AdapterStatus
 import com.unity3d.ads.IUnityAdsInitializationListener

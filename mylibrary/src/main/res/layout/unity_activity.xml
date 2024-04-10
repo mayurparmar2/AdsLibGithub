@@ -32,7 +32,7 @@
 
 
 
-    <com.demo.adslibsss.mylib.view.BannerAdView
+    <com.demo.adslibsss.Adlib.view.BannerAdView
         android:id="@+id/banner_ad_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"

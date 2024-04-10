@@ -1,5 +1,5 @@
 
-package com.demo.adslibsss.mylib.view
+package com.demo.adslibsss.Adlib.view
 
 import android.content.Context
 import android.graphics.Typeface
@@ -16,7 +16,7 @@ import android.widget.RatingBar
 import android.widget.TextView
 import androidx.annotation.RequiresApi
 import com.ads.adslib.R
-import com.demo.adslibsss.mylib.utils.NativeTemplateStyle
+import com.demo.adslibsss.Adlib.utils.NativeTemplateStyle
 import com.google.android.gms.ads.nativead.MediaView
 import com.google.android.gms.ads.nativead.NativeAd
 import com.google.android.gms.ads.nativead.NativeAdView

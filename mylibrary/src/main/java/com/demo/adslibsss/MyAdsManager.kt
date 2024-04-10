@@ -1,14 +1,20 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss
 
 import android.app.Activity
 import android.view.ViewGroup
 import com.ads.adslib.R
-import com.demo.adslibsss.DataModel.Ads
-import com.demo.adslibsss.mylib.utils.Utils
+import com.demo.adslibsss.Adlib.AdNetwork
+import com.demo.adslibsss.Adlib.AppOpenAd
+import com.demo.adslibsss.Adlib.BannerAd
+import com.demo.adslibsss.Adlib.Constant
+import com.demo.adslibsss.Adlib.MyInterstitialAd
+import com.demo.adslibsss.Adlib.NativeAd
+import com.demo.adslibsss.model.Ads
+import com.demo.adslibsss.Adlib.utils.AdUtils
 
 class MyAdsManager(val activity: Activity) {
     var appOpenAdBuilder: AppOpenAd.Builder? = null
-    val adsData: Ads = Utils.adsData.ads
+    val adsData: Ads = AdUtils.adsData.ads
     val adNetwork: AdNetwork.Initialize = AdNetwork.Initialize(activity)
     val bannerAd: BannerAd.Builder = BannerAd.Builder(activity)
     var interstitialAd: MyInterstitialAd.Builder = MyInterstitialAd.Builder(activity)
@@ -22,7 +28,7 @@ class MyAdsManager(val activity: Activity) {
                     .setBackupAdNetwork(this.adsData.backup_ads)
                     .setUnityGameId(this.adsData.ads_unit_id.unity.game_id)
 //                    .setUnityGameId("5331426")
-                    .setDebug(false)
+                    .setDebug(true)
                     .build()
         }
     }
@@ -68,7 +74,7 @@ class MyAdsManager(val activity: Activity) {
                     .setAdMobNativeId(this.adsData.ads_unit_id.admob.native_id)
                     .setFanNativeId(this.adsData.ads_unit_id.facebook.native_id)
                     .setNativeAdBackgroundColor(R.color.colorNativeBackgroundLight, R.color.colorNativeBackgroundDark)
-                    .setNativeAdStyle(nativeAdViewContainer,Constant.STYLE_VIDEO_SMALL)
+                    .setNativeAdStyle(nativeAdViewContainer, Constant.STYLE_VIDEO_SMALL)
                     .build()
         }
     }

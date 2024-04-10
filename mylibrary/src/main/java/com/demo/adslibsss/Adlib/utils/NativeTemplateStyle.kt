@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package com.demo.adslibsss.mylib.utils
+package com.demo.adslibsss.Adlib.utils
 
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable

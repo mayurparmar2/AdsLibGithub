@@ -12,14 +12,14 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <com.demo.adslibsss.mylib.view.TemplateView
+        <com.demo.adslibsss.Adlib.view.TemplateView
             android:id="@+id/admob_native_ad_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
             app:gnt_template_type="@layout/gnt_admob_news_template_view" />
 
-        <com.demo.adslibsss.mylib.utils.AdManagerTemplateView
+        <com.demo.adslibsss.Adlib.utils.AdManagerTemplateView
             android:id="@+id/google_ad_manager_native_ad_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

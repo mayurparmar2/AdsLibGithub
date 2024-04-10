@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 import android.app.Activity
 import android.util.Log
@@ -6,10 +6,10 @@ import android.view.View
 import android.widget.FrameLayout
 import android.widget.RelativeLayout
 import com.ads.adslib.R
-import com.demo.adslibsss.mylib.utils.Utils
-import com.demo.adslibsss.mylib.Constant.UNITY_ADS_BANNER_HEIGHT_MEDIUM
-import com.demo.adslibsss.mylib.Constant.UNITY_ADS_BANNER_WIDTH_MEDIUM
-import com.demo.adslibsss.mylib.utils.Tools
+import com.demo.adslibsss.Adlib.utils.AdUtils
+import com.demo.adslibsss.Adlib.Constant.UNITY_ADS_BANNER_HEIGHT_MEDIUM
+import com.demo.adslibsss.Adlib.Constant.UNITY_ADS_BANNER_WIDTH_MEDIUM
+import com.demo.adslibsss.Adlib.utils.Tools
 import com.facebook.ads.Ad
 import com.facebook.ads.AdError
 import com.facebook.ads.AdView.AdViewLoadConfig
@@ -89,7 +89,7 @@ class BannerAd{
                             adView!!.adUnitId = adMobBannerId
                             adContainerView.removeAllViews()
                             adContainerView.addView(adView)
-                            adView!!.setAdSize(Utils.getAdSize(activity))
+                            adView!!.setAdSize(AdUtils.getAdSize(activity))
                             adView!!.loadAd(Tools.getAdRequest(activity, legacyGDPR))
                             adView!!.adListener = object : AdListener() {
                                 override fun onAdLoaded() {
@@ -172,7 +172,7 @@ class BannerAd{
                             adView!!.adUnitId = adMobBannerId
                             adContainerView.removeAllViews()
                             adContainerView.addView(adView)
-                            adView!!.setAdSize(Utils.getAdSize(activity))
+                            adView!!.setAdSize(AdUtils.getAdSize(activity))
                             adView!!.loadAd(Tools.getAdRequest(activity, legacyGDPR))
                             adView!!.adListener = object : AdListener() {
                                 override fun onAdLoaded() {

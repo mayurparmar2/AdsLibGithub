@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 object Constant {
     const val ADMOB = "admob"

@@ -1,14 +1,13 @@
-package com.demo.adslibsss.mylib
+package com.demo.adslibsss.Adlib
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.util.Log
-import com.demo.adslibsss.mylib.Constant.ADMOB
-import com.demo.adslibsss.mylib.Constant.AD_STATUS_ON
-import com.demo.adslibsss.mylib.Constant.FAN_BIDDING_ADMOB
-import com.demo.adslibsss.mylib.Constant.FAN_BIDDING_AD_MANAGER
-import com.demo.adslibsss.mylib.Constant.GOOGLE_AD_MANAGER
-import com.demo.adslibsss.mylib.utils.OnShowAdCompleteListener
+import com.demo.adslibsss.Adlib.Constant.ADMOB
+import com.demo.adslibsss.Adlib.Constant.FAN_BIDDING_ADMOB
+import com.demo.adslibsss.Adlib.Constant.FAN_BIDDING_AD_MANAGER
+import com.demo.adslibsss.Adlib.Constant.GOOGLE_AD_MANAGER
+import com.demo.adslibsss.Adlib.utils.OnShowAdCompleteListener
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -31,11 +30,14 @@ class AppOpenAd {
     class Builder(activity: Activity) {
         private val activity: Activity
         private var adStatus = true
-        private var adNetwork = "google_ad_manager"
-        private var backupAdNetwork = "admob"
-        private var adMobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
-        private var adManagerAppOpenId = "/6499/example/app-open"
-//        private var adManagerAppOpenId = "ca-app-pub-3940256099942544/9257395921"
+//        private var adNetwork = "google_ad_manager"
+        private var adNetwork = ""
+//        private var backupAdNetwork = "admob"
+        private var backupAdNetwork = ""
+//        private var adMobAppOpenId = "ca-app-pub-3940256099942544/9257395921"
+        private var adMobAppOpenId = ""
+//        private var adManagerAppOpenId = "/6499/example/app-open"
+        private var adManagerAppOpenId = ""
 
         init {
             this.activity = activity
@@ -67,22 +69,22 @@ class AppOpenAd {
         }
 
         fun setAdNetwork(adNetwork: String): Builder {
-//            this.adNetwork = adNetwork
+            this.adNetwork = adNetwork
             return this
         }
 
         fun setBackupAdNetwork(backupAdNetwork: String): Builder {
-//            this.backupAdNetwork = backupAdNetwork
+            this.backupAdNetwork = backupAdNetwork
             return this
         }
 
         fun setAdMobAppOpenId(adMobAppOpenId: String): Builder {
-//            this.adMobAppOpenId = adMobAppOpenId
+            this.adMobAppOpenId = adMobAppOpenId
             return this
         }
 
         fun setAdManagerAppOpenId(adManagerAppOpenId: String): Builder {
-//            this.adManagerAppOpenId = adManagerAppOpenId
+            this.adManagerAppOpenId = adManagerAppOpenId
             return this
         }
         fun destroyOpenAd() {

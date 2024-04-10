@@ -1,4 +1,4 @@
-package com.demo.adslibsss.mylib.view
+package com.demo.adslibsss.Adlib.view
 
 import android.content.Context
 import android.util.AttributeSet
