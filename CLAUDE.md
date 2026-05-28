@@ -131,6 +131,64 @@ consent.gatherConsent(this) {
 }
 ```
 
+## Play Store compliance — AdMob / Meta / Unity
+
+Violating any rule below can cause **app suspension or removal** from Google Play.
+
+### Consent (GDPR / CCPA) — mandatory for all 3 networks
+
+- Always call `ConsentManager.gatherConsent()` **before** `AdsSdk.initialize()`. Never skip or short-circuit the consent flow.
+- Only call `AdsSdk.initialize()` and load ads when `ConsentManager.canRequestAds == true`.
+- The app **must expose a "Privacy Options / Manage Consent" entry point** in its settings screen so users can update consent at any time. Wire it to `ConsentManager.reset()` followed by `gatherConsent()`.
+- For CCPA (California): Meta requires `AudienceNetworkAds.setDataProcessingOptions(arrayOf())` (no restriction) or `arrayOf("LDU")` (limit data use) based on user opt-out. Pass this **before** `AudienceNetworkAds.initialize()`.
+- Unity: call `UnityAds.setPrivacyConsent(true/false)` after the user's consent decision before any Unity ad is loaded.
+
+### Google AdMob — policy rules
+
+- **Never click ads programmatically** and never incentivise users to click ads. This is permanent ban territory.
+- **Never show ads during natural app loading** (splash screen, level loading). Show interstitials only on deliberate user transitions (e.g. after completing a level, before navigating to a new screen).
+- **Test ads in debug only.** `testDeviceIds` must never be populated in release builds. Use `BuildConfig.DEBUG` to gate them.
+- Declare `com.google.android.gms.permission.AD_ID` in the app's `AndroidManifest.xml` (already present). Required on Android 13+ for ad personalisation.
+- The consuming app **must include AdMob App ID** as a `<meta-data>` entry in its manifest: `com.google.android.gms.ads.APPLICATION_ID`. Never put a test App ID in a production build.
+- If the app targets children (Families Policy): set `RequestConfiguration.Builder().setTagForChildDirectedTreatment(TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)` in `AdsSdk.initialize()` and use only certified family-safe ad units.
+
+### Meta Audience Network — policy rules
+
+- Meta ads **require the app to have a Facebook App ID** registered in the Meta developer portal and linked in `strings.xml` (`facebook_app_id`). The app ID in the portal must match the production signing certificate's hash.
+- Never show Meta ads to users under 13. If the app targets children, do not integrate FAN at all.
+- FAN is only valid for **in-app** formats (banner, interstitial, native, rewarded). Do not attempt in-stream/web formats.
+- Call `AudienceNetworkAds.initialize(context)` only inside `AdsSdk.initialize()`, gated on consent. Never call it from a `NetworkAdLoader`.
+- After receiving GDPR consent, forward it to FAN: `AdSettings.setDataProcessingOptions(arrayOf())` (non-EEA / consent given) or keep LDU for opted-out users.
+
+### Unity Ads — policy rules
+
+- Unity requires `com.unity3d.ads.metadata.MediationMetaData` GDPR consent to be set before any ad is loaded. Set `MetaData(context).apply { set("gdpr.consent", true/false); commit() }`.
+- Unity's `AD_SERVICES_CONFIG` property conflicts with AdMob's in the manifest. The fix (`tools:replace="android:resource"`) is already in the app manifest — **do not remove it**.
+- Never initialise Unity Ads more than once per process. Guard with `UnityAds.isInitialized()`.
+
+### Google Play Store — Data Safety section
+
+When the app is published, the **Data Safety form in Play Console must accurately declare** all data collected by the ad SDKs. Minimum required disclosures:
+
+| SDK | Data type | Purpose |
+|-----|-----------|---------|
+| AdMob | Device/app identifiers, location (approximate), diagnostics | Advertising, Analytics |
+| Meta FAN | Device identifiers, usage data, location (approximate) | Advertising |
+| Unity Ads | Device identifiers, usage data, crash data | Advertising, Analytics |
+
+- The app **must link to a privacy policy** from both the Play Store listing and from within the app (e.g. Settings screen). The privacy policy must mention all three ad SDKs by name.
+- Do not use `AD_ID` permission without declaring its purpose in the Data Safety form.
+
+### What will get the app suspended — never do these
+
+- Showing ads before consent is gathered.
+- Clicking, refreshing, or interacting with ads in code.
+- Displaying ads to users in regions where consent was denied.
+- Using production ad unit IDs in debug/test builds (causes invalid traffic flags).
+- Using test ad unit IDs in production builds (zero revenue, policy violation).
+- Showing AdMob ads in apps that also contain sexual, violent, or dangerous content.
+- Showing Meta or Unity ads without completing their respective developer portal setup (App ID, placement ID registration).
+
 ## Known issues / notes
 
 - Meta Audience Network is only valid for **in-app** formats; mobile-web/in-stream were discontinued in 2020.
