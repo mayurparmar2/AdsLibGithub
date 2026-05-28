@@ -53,8 +53,6 @@ dependencies {
     implementation(project(":mylibrary"))
     implementation(fileTree(mapOf("include" to listOf("*.jar"), "dir" to "libs")))
 
-    // AdMob — Banner/AdView seedha app module ma use karva mate
-    implementation("com.google.android.gms:play-services-ads:23.3.0")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation("com.github.bumptech.glide:glide:4.16.0")

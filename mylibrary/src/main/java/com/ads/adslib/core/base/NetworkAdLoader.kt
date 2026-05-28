@@ -2,6 +2,7 @@ package com.ads.adslib.core.base
 
 import android.app.Activity
 import android.content.Context
+import android.view.View
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
@@ -44,4 +45,16 @@ abstract class NetworkAdLoader(
 
     /** Whether this loader currently holds a usable, non-expired ad. */
     open fun isReady(): Boolean = state == AdLoadState.LOADED
+
+    /**
+     * For view-based formats (banner/native): returns the loaded ad View.
+     * Full-screen loaders return null (default).
+     */
+    open fun getView(): View? = null
+
+    /** Lifecycle pause — banner/native loaders override to pause the ad view. */
+    open fun pause() {}
+
+    /** Lifecycle resume — banner/native loaders override to resume the ad view. */
+    open fun resume() {}
 }
