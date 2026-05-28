@@ -7,6 +7,8 @@ import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.meta.rewarded.MetaRewardedLoader
+import com.ads.adslib.unity.rewarded.UnityRewardedLoader
 
 /**
  * Waterfall manager for rewarded ad placements.
@@ -61,8 +63,27 @@ class RewardedAdManager(config: AdUnitConfig) : BaseAdManager(config) {
                 main.post { rewardCallback?.onRewardEarned(type, amount) }
             }
         )
-        // AdNetwork.META  -> MetaRewardedLoader(...)   // meta module ma add karjo
-        // AdNetwork.UNITY -> UnityRewardedLoader(...)  // unity module ma add karjo
+        AdNetwork.META -> MetaRewardedLoader(
+            unit             = unit,
+            onShownCb        = { net -> dispatch { onShown(net) } },
+            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
+            onClickedCb      = { net -> dispatch { onClicked(net) } },
+            onImpressionCb   = { net -> dispatch { onImpression(net) } },
+            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } },
+            onRewardEarnedCb = { type, amount ->
+                main.post { rewardCallback?.onRewardEarned(type, amount) }
+            }
+        )
+        AdNetwork.UNITY -> UnityRewardedLoader(
+            unit             = unit,
+            onShownCb        = { net -> dispatch { onShown(net) } },
+            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
+            onClickedCb      = { net -> dispatch { onClicked(net) } },
+            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } },
+            onRewardEarnedCb = { type, amount ->
+                main.post { rewardCallback?.onRewardEarned(type, amount) }
+            }
+        )
         else -> null
     }
 
