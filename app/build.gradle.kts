@@ -26,15 +26,15 @@ android {
 
     buildTypes {
         release {
-            isDebuggable = false
-            isMinifyEnabled = true
-            isShrinkResources = true
+//            isDebuggable = false
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
         debug {
-            isDebuggable = true
-            isMinifyEnabled = true
-            isShrinkResources = true
+//            isDebuggable = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
