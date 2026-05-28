@@ -6,6 +6,6 @@
     <string name="privacy_policy">Privacy Policy</string>
     <string name="storage_permission_allow_str">Please grant permission</string>
     <string name="facebook_app_id">1378441163022708</string>
-
+    <string name="show_interstitial">Show Interstitial</string>
 
 </resources>

@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    >
+    android:layout_height="match_parent">
+
+    <!-- Content area — fills all space above the bottom banner slot -->
     <RelativeLayout
+        android:id="@+id/content_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/banner1"
-        android:background="@color/black"
-
-        >
+        android:layout_above="@+id/banner1"
+        android:background="@color/black">
 
         <Button
             android:id="@+id/showInterstitial"
@@ -18,8 +17,9 @@
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
             android:layout_marginHorizontal="20dp"
-            android:text="Show Interstitial" />
+            android:text="@string/show_interstitial" />
 
+        <!-- Inline banner container (programmatically filled by loadBanner()) -->
         <LinearLayout
             android:id="@+id/banner_container"
             android:layout_width="match_parent"
@@ -28,23 +28,23 @@
             android:layout_marginTop="10dp"
             android:orientation="vertical" />
 
+        <!-- Native ad container (programmatically filled when NativeAdManager is added) -->
+        <LinearLayout
+            android:id="@+id/native_ad"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/banner_container"
+            android:layout_marginTop="10dp"
+            android:orientation="vertical" />
+
     </RelativeLayout>
 
-
-    <RelativeLayout
+    <!-- Bottom banner slot — FrameLayout is correct for a single programmatic AdView child -->
+    <FrameLayout
         android:id="@+id/banner1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
-        android:gravity="center">
-
-        <RelativeLayout
-            android:id="@+id/banner"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_centerHorizontal="true"
-            android:layout_gravity="center"
-            android:gravity="center" />
-    </RelativeLayout>
+        android:gravity="center" />
 
 </RelativeLayout>

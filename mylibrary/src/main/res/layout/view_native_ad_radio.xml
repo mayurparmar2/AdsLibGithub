@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- FIX 1 (CRASH): Corrupted XML — truncated tag + full block duplicated, causing build failure.
+     FIX 2: com.demo.adslibsss.Adlib.view.TemplateView → NativeAdView (old class removed).
+     FIX 3: com.demo.adslibsss.Adlib.utils.AdManagerTemplateView → NativeAdView (old class removed).
+     FIX 4: Duplicate IDs (admob_native_ad_container x2, fan x2, etc.) removed. -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/parent_view"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
@@ -12,29 +15,20 @@
         android:orientation="vertical"
         android:visibility="gone">
 
-        <com.demo.adslibsss.Adlib.view.TemplateView
+        <com.google.android.gms.ads.nativead.NativeAdView
             android:id="@+id/admob_native_ad_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:gnt_template_type="@layout/gnt_admob_radio_template_view" />
-
-        <com.demo.adslibsss.Adlib.utils.AdManagerTemplateView
-            android:id="@+id/google_ad_manager_native_ad_container"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:gnt_template_type="@layout/gnt_ad_manager_radio_template_view" />
-
-        <com.facebook.ads.NativeAdLayout
-            android:id="@+id/fan_native_ad_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone" />
 
-        <include
-            android:id="@+id/startapp_native_ad_container"
-            layout="@layout/gnt_startapp_radio_template_view"
+        <com.google.android.gms.ads.nativead.NativeAdView
+            android:id="@+id/google_ad_manager_native_ad_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone" />
+
+        <com.facebook.ads.NativeAdLayout
+            android:id="@+id/fan_native_ad_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone" />

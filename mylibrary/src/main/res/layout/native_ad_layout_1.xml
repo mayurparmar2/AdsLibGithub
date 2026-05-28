@@ -3,10 +3,16 @@
     android:id="@+id/ad_unit"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@android:color/white"
+    android:background="@color/gnt_white"
     android:orientation="vertical"
-    android:paddingLeft="10dp"
-    android:paddingRight="10dp">
+    android:paddingStart="10dp"
+    android:paddingEnd="10dp">
+
+    <!-- FIX 1: paddingLeft/Right → paddingStart/End for RTL support (all occurrences) -->
+    <!-- FIX 2: @android:color/white → @color/gnt_white (avoid deprecated @android:color) -->
+    <!-- FIX 3: @android:color/black → @color/gnt_black -->
+    <!-- FIX 4: @android:color/darker_gray → #757575 (no equivalent in app colors) -->
+    <!-- FIX 5: @android:color/white on Button → @color/gnt_white -->
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -15,17 +21,19 @@
         android:paddingBottom="10dp"
         android:paddingTop="10dp">
 
+        <!-- FAN MediaView as icon — required by Meta SDK for icon rendering -->
         <com.facebook.ads.MediaView
             android:id="@+id/native_ad_icon"
             android:layout_width="35dp"
             android:layout_height="35dp" />
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:orientation="vertical"
-            android:paddingLeft="5dp"
-            android:paddingRight="5dp">
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp">
 
             <TextView
                 android:id="@+id/native_ad_title"
@@ -33,7 +41,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:lines="1"
-                android:textColor="@android:color/black"
+                android:textColor="@color/gnt_black"
                 android:textSize="15sp" />
 
             <TextView
@@ -42,14 +50,17 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:lines="1"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="#757575"
                 android:textSize="12sp" />
 
         </LinearLayout>
 
+        <!-- FIX 6: ad_choices_container width was match_parent in a horizontal LinearLayout
+             without weight — it was stealing all remaining space from title/label.
+             Changed to wrap_content so it only takes what it needs. -->
         <LinearLayout
             android:id="@+id/ad_choices_container"
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:gravity="end"
             android:orientation="horizontal" />
@@ -69,7 +80,7 @@
         android:padding="5dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="3"
             android:orientation="vertical">
@@ -80,7 +91,7 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:lines="1"
-                android:textColor="@android:color/darker_gray"
+                android:textColor="#757575"
                 android:textSize="12sp" />
 
             <TextView
@@ -90,7 +101,7 @@
                 android:ellipsize="end"
                 android:gravity="center_vertical"
                 android:lines="2"
-                android:textColor="@android:color/black"
+                android:textColor="@color/gnt_black"
                 android:textSize="12sp" />
 
         </LinearLayout>
@@ -102,9 +113,9 @@
             android:layout_gravity="center_vertical"
             android:layout_weight="1"
             android:background="#4286F4"
-            android:paddingLeft="3dp"
-            android:paddingRight="3dp"
-            android:textColor="@android:color/white"
+            android:paddingStart="3dp"
+            android:paddingEnd="3dp"
+            android:textColor="@color/gnt_white"
             android:textSize="12sp"
             android:visibility="gone" />
 
