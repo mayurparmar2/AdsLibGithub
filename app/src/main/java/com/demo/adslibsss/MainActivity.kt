@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.ads.adslib.AdsSdk
 import com.ads.adslib.admob.banner.BannerAdManager
 import com.ads.adslib.admob.interstitial.InterstitialAdManager
+import com.ads.adslib.admob.native_ad.NativeAdManager
 import com.ads.adslib.admob.rewarded.RewardedAdManager
 import com.ads.adslib.consent.ConsentManager
 import com.ads.adslib.core.callback.AdCallback
@@ -25,10 +26,12 @@ class MainActivity : AppCompatActivity() {
     private val INTERSTITIAL_TEST_ID = "ca-app-pub-3940256099942544/1033173712"
     private val REWARDED_TEST_ID     = "ca-app-pub-3940256099942544/5224354917"
     private val BANNER_TEST_ID       = "ca-app-pub-3940256099942544/6300978111"
+    private val NATIVE_TEST_ID       = "ca-app-pub-3940256099942544/2247696110"
 
     private lateinit var interstitialManager: InterstitialAdManager
     private lateinit var rewardedManager: RewardedAdManager
     private lateinit var bannerManager: BannerAdManager
+    private lateinit var nativeAdManager: NativeAdManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -67,6 +70,7 @@ class MainActivity : AppCompatActivity() {
                     loadInterstitial()
                     loadRewarded()
                     loadBanner()
+                    loadNative()
                 }
             } else {
                 toast("⚠️ Consent na madyo — ads load nahi thay")
@@ -133,6 +137,29 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------
+    // Native — waterfall: AdMob → Meta (future)
+    // ---------------------------------------------------------------
+    private fun loadNative() {
+        val config = AdUnitConfig(
+            placementKey = "main_native",
+            format       = AdFormat.NATIVE,
+            waterfall    = listOf(
+                NetworkAdUnit(AdNetwork.ADMOB, NATIVE_TEST_ID)
+                // NetworkAdUnit(AdNetwork.META, "META_NATIVE_PLACEMENT"),
+            )
+        )
+        nativeAdManager = NativeAdManager(config)
+        nativeAdManager.load(this, object : AdCallback {
+            override fun onLoaded(network: AdNetwork) {
+                nativeAdManager.attach(findViewById<LinearLayout>(R.id.native_ad))
+                toast("🖼 Native loaded via $network")
+            }
+            override fun onFailedToLoad(error: AdError) =
+                toast("❌ Native fail: ${error.message}")
+        })
+    }
+
+    // ---------------------------------------------------------------
     // Banner — waterfall: AdMob → Meta → Unity (future)
     // ---------------------------------------------------------------
     private fun loadBanner() {
@@ -172,6 +199,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         if (::bannerManager.isInitialized)      bannerManager.destroy()
+        if (::nativeAdManager.isInitialized)    nativeAdManager.destroy()
         if (::interstitialManager.isInitialized) interstitialManager.destroy()
         if (::rewardedManager.isInitialized)     rewardedManager.destroy()
         super.onDestroy()
