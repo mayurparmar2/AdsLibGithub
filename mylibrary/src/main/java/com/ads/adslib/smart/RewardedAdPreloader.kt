@@ -123,6 +123,8 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
                 activeCallback?.onRewardEarned(type, amount)
             }
             override fun onShown(network: AdNetwork) {
+                // Block App Open from stacking on top of this ad.
+                FullScreenAdState.onShown()
                 // ✅ Ad visible — preload the NEXT rewarded ad immediately.
                 AdLog.d("rewarded_preloader", "shown via $network — preloading next")
                 activeCallback?.onShown(network)
@@ -135,6 +137,7 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
                 activeCallback?.onImpression(network)
             }
             override fun onDismissed(network: AdNetwork) {
+                FullScreenAdState.onClosed()
                 activeCallback?.onDismissed(network)
                 showingManager?.destroy()
                 showingManager = null
@@ -143,6 +146,7 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
             }
             override fun onFailedToShow(error: AdError) {
                 AdLog.w("rewarded_preloader", "show failed: $error")
+                FullScreenAdState.onClosed()
                 activeCallback?.onFailedToShow(error)
                 showingManager?.destroy()
                 showingManager = null

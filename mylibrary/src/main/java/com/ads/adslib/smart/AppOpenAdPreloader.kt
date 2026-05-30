@@ -3,7 +3,9 @@ package com.ads.adslib.smart
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
-import com.ads.adslib.core.model.AdError
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.ads.adslib.util.AdLog
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -11,24 +13,32 @@ import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.appopen.AppOpenAd
 
 /**
- * Preloads an App Open ad in the Application class and shows it automatically
- * whenever the app returns to the foreground from background.
+ * Preloads an App Open ad and shows it when the app returns to the
+ * foreground from the background.
  *
- * App Open ads expire after 4 hours — this class tracks load time and
- * discards stale ads before attempting to show.
+ * **Why ProcessLifecycleOwner (not per-Activity counting)?**
+ * Counting started activities cannot distinguish "user returned from
+ * background" from "user just closed an interstitial" — closing a
+ * full-screen ad restarts the host Activity and would wrongly trigger an
+ * App Open ad on top of / right after the interstitial.
+ * [ProcessLifecycleOwner] fires ON_START only on a *real* app foreground,
+ * so ad-activity transitions within the app never trigger it.
  *
- * Register via [SmartAdManager.init] — do NOT call directly from Activities.
+ * A second guard ([FullScreenAdState]) ensures an App Open ad is never
+ * shown while another full-screen ad is visible or just dismissed.
+ *
+ * App Open ads expire after 4 hours — stale ads are discarded before show.
  */
 internal class AppOpenAdPreloader(
     private val application: Application,
     private val config: SmartAdConfig,
-) : Application.ActivityLifecycleCallbacks {
+) : Application.ActivityLifecycleCallbacks, DefaultLifecycleObserver {
 
     private var appOpenAd: AppOpenAd? = null
     private var loadedAt: Long = 0L
-    private var isShowingAd = false
+    private var isShowingAppOpen = false
     private var currentActivity: Activity? = null
-    private var startedCount = 0          // tracks foreground/background state
+    private var isFirstForeground = true
 
     private val retry = AdRetryScheduler(
         tag         = "appopen_preloader",
@@ -37,40 +47,50 @@ internal class AppOpenAdPreloader(
         maxDelayMs  = config.retryMaxDelayMs,
     )
 
-    // ── Lifecycle callbacks ──────────────────────────────────────────
-
-    override fun onActivityStarted(activity: Activity) {
-        if (!isShowingAd) currentActivity = activity
-        startedCount++
-        if (startedCount > 1) return  // already in foreground
-        // App came to foreground — show if ready
-        showIfAvailable()
-    }
-
-    override fun onActivityStopped(activity: Activity) { startedCount-- }
-    override fun onActivityResumed(activity: Activity) { if (!isShowingAd) currentActivity = activity }
-    override fun onActivityPaused(activity: Activity) {}
-    override fun onActivityCreated(activity: Activity, b: Bundle?) {}
-    override fun onActivitySaveInstanceState(activity: Activity, b: Bundle) {}
-    override fun onActivityDestroyed(activity: Activity) {
-        if (currentActivity == activity) currentActivity = null
-    }
-
     // ── Public ───────────────────────────────────────────────────────
 
     /** Call once from [SmartAdManager.init]. */
     fun start() {
         application.registerActivityLifecycleCallbacks(this)
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         loadAd()
     }
 
     fun destroy() {
         retry.cancel()
         application.unregisterActivityLifecycleCallbacks(this)
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
         appOpenAd?.fullScreenContentCallback = null
         appOpenAd = null
         currentActivity = null
     }
+
+    // ── App foreground (real background → foreground only) ────────────
+
+    override fun onStart(owner: LifecycleOwner) {
+        // Skip the very first foreground (cold start) — showing an App Open
+        // on launch competes with the splash/first screen and is rarely
+        // ready in time anyway.
+        if (isFirstForeground) {
+            isFirstForeground = false
+            return
+        }
+        showIfAvailable()
+    }
+
+    // ── Track the visible activity (needed to call ad.show) ──────────
+
+    override fun onActivityResumed(activity: Activity) {
+        if (!isShowingAppOpen) currentActivity = activity
+    }
+    override fun onActivityDestroyed(activity: Activity) {
+        if (currentActivity == activity) currentActivity = null
+    }
+    override fun onActivityStarted(activity: Activity) {}
+    override fun onActivityStopped(activity: Activity) {}
+    override fun onActivityPaused(activity: Activity) {}
+    override fun onActivityCreated(activity: Activity, b: Bundle?) {}
+    override fun onActivitySaveInstanceState(activity: Activity, b: Bundle) {}
 
     // ── Internal ─────────────────────────────────────────────────────
 
@@ -80,7 +100,18 @@ internal class AppOpenAdPreloader(
     }
 
     private fun showIfAvailable() {
-        val ad = appOpenAd ?: return
+        // GUARD 1: never stack on another full-screen ad, or show right
+        // after one was dismissed (the re-foreground race).
+        if (FullScreenAdState.isShowing || FullScreenAdState.closedRecently()) {
+            AdLog.d("appopen_preloader", "skipped — another full-screen ad active")
+            return
+        }
+
+        val ad = appOpenAd
+        if (ad == null) {
+            loadAd()
+            return
+        }
         if (!isAdFresh()) {
             AdLog.d("appopen_preloader", "ad expired — reloading")
             appOpenAd = null
@@ -88,9 +119,10 @@ internal class AppOpenAdPreloader(
             return
         }
         val activity = currentActivity ?: return
-        if (isShowingAd) return
+        if (isShowingAppOpen) return
 
-        isShowingAd = true
+        isShowingAppOpen = true
+        FullScreenAdState.onShown()
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
                 AdLog.d("appopen_preloader", "shown")
@@ -98,13 +130,15 @@ internal class AppOpenAdPreloader(
             override fun onAdDismissedFullScreenContent() {
                 AdLog.d("appopen_preloader", "dismissed — reloading")
                 appOpenAd = null
-                isShowingAd = false
+                isShowingAppOpen = false
+                FullScreenAdState.onClosed()
                 loadAd()
             }
             override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
                 AdLog.w("appopen_preloader", "show failed: ${error.message}")
                 appOpenAd = null
-                isShowingAd = false
+                isShowingAppOpen = false
+                FullScreenAdState.onClosed()
                 loadAd()
             }
         }

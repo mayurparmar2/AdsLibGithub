@@ -47,6 +47,9 @@ dependencies {
     // Old consent library replaced by UMP SDK
     // implementation("com.google.android.ads.consent:consent-library:1.0.8")
 
+    // App-level foreground/background detection for App Open ads
+    implementation("androidx.lifecycle:lifecycle-process:2.8.7")
+
     // Google UMP (GDPR Consent) SDK
     implementation("com.google.android.ump:user-messaging-platform:3.1.0")
 

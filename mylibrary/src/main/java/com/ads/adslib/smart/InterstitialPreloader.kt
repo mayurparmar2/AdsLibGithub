@@ -105,12 +105,15 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
                 retry.schedule { load() }
             }
             override fun onShown(network: AdNetwork) {
+                // Block App Open from stacking on top of this ad.
+                FullScreenAdState.onShown()
                 // ✅ Ad is now visible — preload the NEXT ad immediately
                 // so it's ready before the user dismisses this one.
                 AdLog.d("interstitial_preloader", "shown via $network — preloading next")
                 load()
             }
             override fun onDismissed(network: AdNetwork) {
+                FullScreenAdState.onClosed()
                 // Current ad finished — free the manager that just showed.
                 showingManager?.destroy()
                 showingManager = null
@@ -119,6 +122,7 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
             }
             override fun onFailedToShow(error: AdError) {
                 AdLog.w("interstitial_preloader", "show failed: $error")
+                FullScreenAdState.onClosed()
                 showingManager?.destroy()
                 showingManager = null
                 if (readyManager == null) load()
