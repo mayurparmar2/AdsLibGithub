@@ -195,6 +195,8 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+
+
     // ── Native — RC-driven ────────────────────────────────────────────
     private fun loadNativeFromConfig(screen: String) {
         // Prefer the SmartAdManager prefetch cache first.
