@@ -122,6 +122,7 @@ reused for every format. Per-format managers only implement `createLoader(unit: 
 - Full-screen loaders (AdMob/Meta/Unity interstitial & rewarded) take a single `FullScreenCallbacks` holder, wired once via `BaseAdManager.fullScreenCallbacks()` — do not reintroduce per-callback constructor params.
 - `BaseAdManager.onFullScreenClosed()` resets state to IDLE on dismiss/show-fail so a manager can be reloaded.
 - SDK init order in `AdsSdk.initialize()`: forward consent to Meta (`AdSettings.setDataProcessingOptions`) and Unity (`MetaData("gdpr.consent")`) BEFORE initializing them; never init a network SDK from a loader.
+- `SmartAdManager` (app-wide preloading) is **opt-in**: `MyLibrary.provideAdsConfig()` returns `SmartAdConfig?` and defaults to null. Returning null skips `SmartAdManager.init` entirely; the app then uses only the RC per-screen managers. All `SmartAdManager` public methods are null-safe when it was never initialized.
 
 ## Usage flow (reference for demo app / docs)
 

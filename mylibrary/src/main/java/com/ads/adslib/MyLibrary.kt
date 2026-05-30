@@ -20,18 +20,20 @@ import com.ads.adslib.smart.SmartAdManager
  *
  *     override fun isDebugBuild() = BuildConfig.DEBUG
  *
+ *     override fun provideRemoteConfigDefaults() = mapOf(
+ *         "ads_enabled"           to true,
+ *         "interstitial_interval" to 60L,
+ *     )
+ *
+ *     // OPTIONAL — only override if you want the app-wide SmartAdManager
+ *     // preloaders (interstitial / rewarded / app-open / native cache).
+ *     // Omit it (return null) to use only the Remote-Config per-screen
+ *     // managers (BannerAdManager / NativeAdManager / InterstitialAdManager / …).
  *     override fun provideAdsConfig() = SmartAdConfig(
  *         interstitialUnitId = "ca-app-pub-xxx/111",
  *         rewardedUnitId     = "ca-app-pub-xxx/222",
  *         appOpenUnitId      = "ca-app-pub-xxx/333",
  *         nativeUnitId       = "ca-app-pub-xxx/444",
- *     )
- *
- *     override fun provideRemoteConfigDefaults() = mapOf(
- *         "ads_enabled"           to true,
- *         "interstitial_enabled"  to true,
- *         "rewarded_enabled"      to true,
- *         "interstitial_interval" to 60L,
  *     )
  * }
  * ```
@@ -48,15 +50,26 @@ abstract class MyLibrary : Application() {
     /** Return [BuildConfig.DEBUG] from the app module. */
     abstract fun isDebugBuild(): Boolean
 
-    /** All ad unit IDs and tuning parameters for [SmartAdManager]. */
-    abstract fun provideAdsConfig(): SmartAdConfig
-
     /**
      * Firebase Remote Config default values.
      * These are used immediately (before any fetch) so ads behave
      * correctly even on first launch with no network.
      */
     abstract fun provideRemoteConfigDefaults(): Map<String, Any>
+
+    // ── Optional — override to enable app-wide preloading ────────────
+
+    /**
+     * Ad unit IDs + tuning for the app-wide [SmartAdManager] preloaders
+     * (interstitial / rewarded / app-open / native cache).
+     *
+     * **Optional.** The default returns null, which disables [SmartAdManager]
+     * entirely — the app then uses only the Remote-Config-driven per-screen
+     * managers ([com.ads.adslib.admob.banner.BannerAdManager],
+     * [com.ads.adslib.admob.native_ad.NativeAdManager], etc.). Override it only
+     * if you want background preloading.
+     */
+    open fun provideAdsConfig(): SmartAdConfig? = null
 
     // ── Lifecycle ────────────────────────────────────────────────────
 
@@ -69,9 +82,17 @@ abstract class MyLibrary : Application() {
 
     /**
      * Called by [AdsLib.initWithActivity] once MobileAds is ready.
-     * Starts all ad preloaders via [SmartAdManager].
+     * Starts the app-wide preloaders via [SmartAdManager] — but only if the app
+     * opted in by overriding [provideAdsConfig]. Otherwise it's a no-op and the
+     * app relies solely on the Remote-Config per-screen managers.
      */
     internal fun onAdsReady() {
+        // App-wide preloading is opt-in.
+        val smartConfig = provideAdsConfig() ?: run {
+            Log.d("MyLibrary", "No SmartAdConfig — app-wide preloading disabled")
+            return
+        }
+
         // Remote Config kill-switch: if RC has loaded and ads are disabled,
         // do NOT start any preloader (interstitial / app-open / native / rewarded).
         if (AdsConfigRepository.isLoaded && !AdsConfigRepository.adsEnabled) {
@@ -85,9 +106,7 @@ abstract class MyLibrary : Application() {
 
         SmartAdManager.init(
             application = this,
-            config      = provideAdsConfig().copy(
-                interstitialIntervalSec = intervalSec
-            )
+            config      = smartConfig.copy(interstitialIntervalSec = intervalSec)
         )
     }
 
