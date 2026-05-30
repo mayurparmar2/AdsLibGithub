@@ -5,6 +5,8 @@ import com.ads.adslib.config.RemoteConfigManager
 import com.ads.adslib.util.AdLog
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
+import com.unity3d.ads.IUnityAdsInitializationListener
+import com.unity3d.ads.UnityAds
 
 /**
  * Single entry point for the Ads library — initialize once, then create per-placement managers.
@@ -42,12 +44,14 @@ object AdsSdk {
      * @param context application context.
      * @param debug enables verbose logging and registers test devices.
      * @param testDeviceIds AdMob test device IDs (debug only).
-     * @param onComplete called on the main thread when initialization finishes.
+     * @param unityGameId Unity Ads game id (from Remote Config). Null/blank skips Unity.
+     * @param onComplete called on the main thread when AdMob initialization finishes.
      */
     fun initialize(
         context: Context,
         debug: Boolean = false,
         testDeviceIds: List<String> = emptyList(),
+        unityGameId: String? = null,
         onComplete: () -> Unit = {}
     ) {
         AdLog.enabled = debug
@@ -75,6 +79,9 @@ object AdsSdk {
             )
         }
 
+        // Unity Ads inits independently of AdMob (its own SDK).
+        initUnity(context, unityGameId, debug)
+
         // BUG FIX: use the listener overload so callbacks fire only AFTER
         // MobileAds is actually initialized (the previous `.apply {}` ran the
         // block synchronously, before init had completed).
@@ -82,7 +89,6 @@ object AdsSdk {
             initialized = true
             initializing = false
             AdLog.d("sdk", "MobileAds initialized")
-            // Meta/Unity SDK init hooks go here when those modules are added.
             val callbacks = pendingCallbacks.toList()
             pendingCallbacks.clear()
             callbacks.forEach { it() }
@@ -90,4 +96,26 @@ object AdsSdk {
     }
 
     fun isInitialized(): Boolean = initialized
+
+    /** Initialize Unity Ads once, if a game id is configured. */
+    private fun initUnity(context: Context, gameId: String?, debug: Boolean) {
+        if (gameId.isNullOrBlank()) return
+        if (UnityAds.isInitialized) return
+        UnityAds.initialize(
+            context.applicationContext,
+            gameId,
+            debug,                       // testMode = debug build
+            object : IUnityAdsInitializationListener {
+                override fun onInitializationComplete() {
+                    AdLog.d("sdk", "UnityAds initialized")
+                }
+                override fun onInitializationFailed(
+                    error: UnityAds.UnityAdsInitializationError?,
+                    message: String?
+                ) {
+                    AdLog.w("sdk", "UnityAds init failed: $message")
+                }
+            }
+        )
+    }
 }

@@ -1,6 +1,7 @@
 package com.ads.adslib
 
 import android.app.Activity
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.consent.ConsentManager
 
 /**
@@ -53,6 +54,7 @@ object AdsLib {
                     context       = activity.applicationContext,
                     debug         = myLibrary.isDebugBuild(),
                     testDeviceIds = if (myLibrary.isDebugBuild()) listOf("EMULATOR") else emptyList(),
+                    unityGameId   = AdsConfigRepository.unityGameId(),
                 ) {
                     myLibrary.onAdsReady()   // starts SmartAdManager preloaders
                     onReady()
