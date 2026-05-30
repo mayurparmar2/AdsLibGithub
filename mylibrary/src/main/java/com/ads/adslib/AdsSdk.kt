@@ -26,11 +26,18 @@ object AdsSdk {
     @Volatile
     private var initialized = false
 
+    @Volatile
+    private var initializing = false
+
+    /** Callbacks waiting for an in-flight initialization to finish. */
+    private val pendingCallbacks = mutableListOf<() -> Unit>()
+
     /** Optional remote-config handle, exposed for app-side checks. */
     val remoteConfig: RemoteConfigManager by lazy { RemoteConfigManager() }
 
     /**
-     * Initialize underlying ad SDKs. Safe to call multiple times; only the first runs.
+     * Initialize underlying ad SDKs. Safe to call multiple times — initialization
+     * runs only once; concurrent callers all get notified when it completes.
      *
      * @param context application context.
      * @param debug enables verbose logging and registers test devices.
@@ -44,10 +51,21 @@ object AdsSdk {
         onComplete: () -> Unit = {}
     ) {
         AdLog.enabled = debug
+
+        // Already done — fire immediately.
         if (initialized) {
             onComplete()
             return
         }
+
+        // Init in flight — queue this callback, don't start a second init.
+        if (initializing) {
+            pendingCallbacks.add(onComplete)
+            return
+        }
+
+        initializing = true
+        pendingCallbacks.add(onComplete)
 
         if (debug && testDeviceIds.isNotEmpty()) {
             MobileAds.setRequestConfiguration(
@@ -57,11 +75,17 @@ object AdsSdk {
             )
         }
 
-        MobileAds.initialize(context).apply {
+        // BUG FIX: use the listener overload so callbacks fire only AFTER
+        // MobileAds is actually initialized (the previous `.apply {}` ran the
+        // block synchronously, before init had completed).
+        MobileAds.initialize(context) {
             initialized = true
+            initializing = false
             AdLog.d("sdk", "MobileAds initialized")
             // Meta/Unity SDK init hooks go here when those modules are added.
-            onComplete()
+            val callbacks = pendingCallbacks.toList()
+            pendingCallbacks.clear()
+            callbacks.forEach { it() }
         }
     }
 

@@ -5,43 +5,58 @@ import com.google.firebase.remoteconfig.FirebaseRemoteConfig
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings
 
 /**
- * Wraps Firebase Remote Config to let you toggle ads and tune behaviour remotely
- * without an app update.
+ * Thin, null-safe wrapper over Firebase Remote Config.
  *
- * Recommended keys (define matching defaults in your app):
- *  - "ads_enabled"          : Boolean master switch
- *  - "interstitial_enabled" : Boolean per-format switch
- *  - "interstitial_interval": Long, min seconds between interstitials
+ * If FirebaseApp is not initialized (no google-services.json / plugin),
+ * [FirebaseRemoteConfig.getInstance] throws. This wrapper swallows that and
+ * falls back to the in-memory defaults supplied via [init], so the rest of
+ * the library keeps working without Remote Config.
  */
-class RemoteConfigManager(
-    private val remoteConfig: FirebaseRemoteConfig = FirebaseRemoteConfig.getInstance()
-) {
+class RemoteConfigManager {
 
-    /**
-     * @param defaults map of key -> default value applied before fetch.
-     * @param minFetchIntervalSeconds lower this only in debug builds.
-     * @param onReady invoked after fetchAndActivate completes (or fails gracefully).
-     */
+    // Obtained safely — null when FirebaseApp is not initialized.
+    private val remoteConfig: FirebaseRemoteConfig? = runCatching {
+        FirebaseRemoteConfig.getInstance()
+    }.getOrNull()
+
+    /** Local copy of defaults so getters work even when RC is unavailable. */
+    private val localDefaults = mutableMapOf<String, Any>()
+
     fun init(
         defaults: Map<String, Any>,
         minFetchIntervalSeconds: Long = 3600,
         onReady: () -> Unit = {}
     ) {
-        remoteConfig.setConfigSettingsAsync(
+        localDefaults.putAll(defaults)
+
+        val rc = remoteConfig
+        if (rc == null) {
+            AdLog.w("remote_config", "FirebaseApp unavailable — using local defaults")
+            onReady()
+            return
+        }
+
+        rc.setConfigSettingsAsync(
             FirebaseRemoteConfigSettings.Builder()
                 .setMinimumFetchIntervalInSeconds(minFetchIntervalSeconds)
                 .build()
         )
-        remoteConfig.setDefaultsAsync(defaults)
-        remoteConfig.fetchAndActivate()
+        rc.setDefaultsAsync(defaults)
+        rc.fetchAndActivate()
             .addOnCompleteListener { task ->
                 AdLog.d("remote_config", "fetchAndActivate success=${task.isSuccessful}")
                 onReady()
             }
     }
 
-    fun isAdsEnabled(): Boolean = remoteConfig.getBoolean("ads_enabled")
-    fun getBoolean(key: String): Boolean = remoteConfig.getBoolean(key)
-    fun getLong(key: String): Long = remoteConfig.getLong(key)
-    fun getString(key: String): String = remoteConfig.getString(key)
+    fun isAdsEnabled(): Boolean = getBoolean("ads_enabled")
+
+    fun getBoolean(key: String): Boolean =
+        remoteConfig?.getBoolean(key) ?: (localDefaults[key] as? Boolean ?: false)
+
+    fun getLong(key: String): Long =
+        remoteConfig?.getLong(key) ?: (localDefaults[key] as? Long ?: 0L)
+
+    fun getString(key: String): String =
+        remoteConfig?.getString(key) ?: (localDefaults[key] as? String ?: "")
 }
