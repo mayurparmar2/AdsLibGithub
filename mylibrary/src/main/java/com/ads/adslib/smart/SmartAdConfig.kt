@@ -1,7 +1,6 @@
 package com.ads.adslib.smart
 
 import com.ads.adslib.core.model.AdNetwork
-import com.ads.adslib.core.model.BannerAdSize
 import com.ads.adslib.core.model.NetworkAdUnit
 
 /**
@@ -15,7 +14,6 @@ data class SmartAdConfig(
     val rewardedUnitId: String,
     val appOpenUnitId: String,
     val nativeUnitId: String,
-    val bannerUnitId: String = "",
 
     // ── Interstitial ───────────────────────────────────────────────
     /** Minimum seconds between two interstitial shows. */
@@ -38,8 +36,6 @@ data class SmartAdConfig(
     // ── Waterfalls (optional extra networks per format) ────────────
     val interstitialWaterfall: List<NetworkAdUnit> = emptyList(),
     val rewardedWaterfall: List<NetworkAdUnit> = emptyList(),
-    val nativeWaterfall: List<NetworkAdUnit> = emptyList(),
-    val bannerSize: BannerAdSize = BannerAdSize.ADAPTIVE,
 ) {
     /** Full interstitial waterfall with primary unit at the front. */
     internal fun interstitialUnits(): List<NetworkAdUnit> =
@@ -48,8 +44,4 @@ data class SmartAdConfig(
     /** Full rewarded waterfall with primary unit at the front. */
     internal fun rewardedUnits(): List<NetworkAdUnit> =
         listOf(NetworkAdUnit(AdNetwork.ADMOB, rewardedUnitId)) + rewardedWaterfall
-
-    /** Full native waterfall with primary unit at the front. */
-    internal fun nativeUnits(): List<NetworkAdUnit> =
-        listOf(NetworkAdUnit(AdNetwork.ADMOB, nativeUnitId)) + nativeWaterfall
 }

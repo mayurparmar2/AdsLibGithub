@@ -20,7 +20,6 @@ class App : MyLibrary() {
         rewardedUnitId     = "ca-app-pub-3940256099942544/5224354917",
         appOpenUnitId      = "ca-app-pub-3940256099942544/9257395921",
         nativeUnitId       = "ca-app-pub-3940256099942544/2247696110",
-        bannerUnitId       = "ca-app-pub-3940256099942544/6300978111",
         nativeCacheSize        = 3,
         nativeExpiryMinutes    = 60,
         maxRetries             = 6,
