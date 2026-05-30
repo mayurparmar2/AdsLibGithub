@@ -1,6 +1,7 @@
 package com.demo.adslibsss
 
 import android.app.Application
+import android.util.Log
 import com.ads.adslib.AdsSdk
 
 class App : Application() {
@@ -11,17 +12,25 @@ class App : Application() {
     }
 
     private fun initRemoteConfig() {
-        AdsSdk.remoteConfig.init(
-            defaults = mapOf(
-                "ads_enabled"           to true,
-                "interstitial_enabled"  to true,
-                "rewarded_enabled"      to true,
-                "banner_enabled"        to true,
-                "native_enabled"        to true,
-                "interstitial_interval" to 60L,   // seconds between interstitials
-            ),
-            // debug build ma 0 rakhjo — production ma 3600 (1 hour)
-            minFetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else 3600L
-        )
+        // FirebaseApp is auto-initialized by FirebaseInitProvider (ContentProvider)
+        // before Application.onCreate() when google-services plugin is applied.
+        // The try-catch is a safety net for misconfigured builds.
+        try {
+            AdsSdk.remoteConfig.init(
+                defaults = mapOf(
+                    "ads_enabled"           to true,
+                    "interstitial_enabled"  to true,
+                    "rewarded_enabled"      to true,
+                    "banner_enabled"        to true,
+                    "native_enabled"        to true,
+                    "interstitial_interval" to 60L,   // seconds between interstitials
+                ),
+                minFetchIntervalSeconds = if (BuildConfig.DEBUG) 0L else 3600L
+            )
+        } catch (e: IllegalStateException) {
+            // FirebaseApp not yet initialized — google-services.json missing or
+            // google-services plugin not applied. Hardcoded defaults will be used.
+            Log.w("AdsLib", "Remote Config unavailable: ${e.message}")
+        }
     }
 }

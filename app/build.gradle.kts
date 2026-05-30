@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -8,7 +9,7 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.demo.adslibsss"
+        applicationId = "test.app.gallery"
         minSdk = 21
         targetSdk = 36
         versionCode = 1
