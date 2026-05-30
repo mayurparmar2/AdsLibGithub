@@ -3,6 +3,7 @@ package com.ads.adslib
 import android.app.Application
 import android.content.Context
 import android.util.Log
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.smart.SmartAdConfig
 import com.ads.adslib.smart.SmartAdManager
 
