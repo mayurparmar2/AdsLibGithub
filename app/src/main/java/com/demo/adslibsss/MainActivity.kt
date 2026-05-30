@@ -6,9 +6,7 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.ads.adslib.admob.banner.BannerAdManager
-import com.ads.adslib.admob.interstitial.InterstitialAdManager
 import com.ads.adslib.admob.native_ad.NativeAdManager
-import com.ads.adslib.admob.rewarded.RewardedAdManager
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
@@ -21,13 +19,10 @@ import com.ads.adslib.core.model.NetworkAdUnit
 class MainActivity : AppCompatActivity() {
 
     // ---- AdMob Official Test IDs ----
-    private val INTERSTITIAL_TEST_ID = "ca-app-pub-3940256099942544/1033173712"
-    private val REWARDED_TEST_ID     = "ca-app-pub-3940256099942544/5224354917"
-    private val BANNER_TEST_ID       = "ca-app-pub-3940256099942544/6300978111"
-    private val NATIVE_TEST_ID       = "ca-app-pub-3940256099942544/2247696110"
+    private val BANNER_TEST_ID = "ca-app-pub-3940256099942544/6300978111"
+    private val NATIVE_TEST_ID = "ca-app-pub-3940256099942544/2247696110"
 
-    private lateinit var interstitialManager: InterstitialAdManager
-    private lateinit var rewardedManager: RewardedAdManager
+    // Interstitial + Rewarded are managed by AdsPreloader (always preloaded)
     private lateinit var bannerManager: BannerAdManager
     private lateinit var nativeAdManager: NativeAdManager
 
@@ -35,95 +30,38 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_activity)
 
+        // AdsPreloader handles load/reload automatically
         findViewById<Button>(R.id.showInterstitial).setOnClickListener {
-            if (::interstitialManager.isInitialized && interstitialManager.isReady())
-                interstitialManager.show(this)
-            else
-                toast("⏳ Interstitial loading...")
+            val shown = AdsPreloader.tryShowInterstitial(this)
+            if (!shown) toast("⏳ Interstitial not ready or interval active")
         }
 
         findViewById<Button>(R.id.showRewarded).setOnClickListener {
-            if (::rewardedManager.isInitialized && rewardedManager.isReady())
-                rewardedManager.show(this)
-            else
-                toast("⏳ Rewarded loading...")
+            AdsPreloader.showRewarded(
+                activity = this,
+                callback = object : RewardCallback {
+                    override fun onRewardEarned(type: String, amount: Int) =
+                        toast("🏆 Reward: $amount $type")
+                    override fun onDismissed(network: AdNetwork) =
+                        toast("Rewarded dismissed via $network")
+                    override fun onFailedToShow(error: AdError) =
+                        toast("❌ Show fail: ${error.message}")
+                },
+                onNotReady = { toast("⏳ Rewarded not ready yet") }
+            )
         }
 
-        // Consent + SDK init — then load all ads
+        // Consent + SDK init → AdsPreloader.preload() → loadBanner + loadNative
         AdsInitializer.init(
             activity  = this,
-            onReady   = { loadAllAds() },
+            onReady   = {
+                toast("✅ AdsSdk ready!")
+                // Preloader already started in AdsInitializer.init()
+                loadBanner()
+                loadNative()
+            },
             onBlocked = { toast("⚠️ Consent na madyo — ads load nahi thay") }
         )
-    }
-
-    // ---------------------------------------------------------------
-    // Load all formats once SDK is ready
-    // ---------------------------------------------------------------
-    private fun loadAllAds() {
-        toast("✅ AdsSdk ready!")
-        loadInterstitial()
-        loadRewarded()
-        loadBanner()
-        loadNative()
-    }
-
-    // ---------------------------------------------------------------
-    // Interstitial — waterfall: AdMob → Meta → Unity
-    // ---------------------------------------------------------------
-    private fun loadInterstitial() {
-        val config = AdUnitConfig(
-            placementKey = "main_interstitial",
-            format       = AdFormat.INTERSTITIAL,
-            waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, INTERSTITIAL_TEST_ID),
-                // NetworkAdUnit(AdNetwork.META,  "META_PLACEMENT_ID"),
-                // NetworkAdUnit(AdNetwork.UNITY, "UNITY_PLACEMENT_ID"),
-            )
-        )
-        interstitialManager = InterstitialAdManager(config)
-        interstitialManager.load(this, object : AdCallback {
-            override fun onLoaded(network: AdNetwork) =
-                toast("🎉 Interstitial loaded via $network")
-            override fun onFailedToLoad(error: AdError) =
-                toast("❌ Interstitial fail: ${error.message}")
-            override fun onDismissed(network: AdNetwork) {
-                interstitialManager.destroy()
-                loadInterstitial()
-            }
-            override fun onFailedToShow(error: AdError) =
-                toast("❌ Show fail: ${error.message}")
-        })
-    }
-
-    // ---------------------------------------------------------------
-    // Rewarded — waterfall: AdMob → Meta → Unity
-    // ---------------------------------------------------------------
-    private fun loadRewarded() {
-        val config = AdUnitConfig(
-            placementKey = "main_rewarded",
-            format       = AdFormat.REWARDED,
-            waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, REWARDED_TEST_ID),
-                // NetworkAdUnit(AdNetwork.META,  "META_REWARDED_PLACEMENT"),
-                // NetworkAdUnit(AdNetwork.UNITY, "UNITY_REWARDED_PLACEMENT"),
-            )
-        )
-        rewardedManager = RewardedAdManager(config)
-        rewardedManager.load(this, object : RewardCallback {
-            override fun onLoaded(network: AdNetwork) =
-                toast("🎁 Rewarded loaded via $network")
-            override fun onFailedToLoad(error: AdError) =
-                toast("❌ Rewarded fail: ${error.message}")
-            override fun onRewardEarned(type: String, amount: Int) =
-                toast("🏆 Reward: $amount $type")
-            override fun onDismissed(network: AdNetwork) {
-                rewardedManager.destroy()
-                loadRewarded()
-            }
-            override fun onFailedToShow(error: AdError) =
-                toast("❌ Show fail: ${error.message}")
-        })
     }
 
     // ---------------------------------------------------------------
@@ -188,11 +126,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (::bannerManager.isInitialized)       bannerManager.destroy()
-        if (::nativeAdManager.isInitialized)     nativeAdManager.destroy()
-        if (::interstitialManager.isInitialized) interstitialManager.destroy()
-        if (::rewardedManager.isInitialized)     rewardedManager.destroy()
+        if (::bannerManager.isInitialized)   bannerManager.destroy()
+        if (::nativeAdManager.isInitialized) nativeAdManager.destroy()
         super.onDestroy()
+        // Note: AdsPreloader.destroy() only in Application.onTerminate()
+        // — preloader should survive Activity recreations (rotation, etc.)
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()

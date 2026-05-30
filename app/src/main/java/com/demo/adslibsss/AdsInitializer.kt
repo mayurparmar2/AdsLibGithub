@@ -46,8 +46,13 @@ object AdsInitializer {
                     context       = activity.applicationContext,
                     debug         = BuildConfig.DEBUG,
                     testDeviceIds = if (BuildConfig.DEBUG) listOf("EMULATOR") else emptyList(),
-                    onComplete    = onReady
-                )
+                ) {
+                    // Start preloading interstitial + rewarded immediately
+                    val intervalSec = AdsSdk.remoteConfig.getLong("interstitial_interval")
+                        .takeIf { it > 0 } ?: 30L
+                    AdsPreloader.preload(activity.applicationContext, intervalSec)
+                    onReady()
+                }
             } else {
                 onBlocked()
             }
