@@ -13,15 +13,24 @@ import com.ads.adslib.util.AdLog
 /**
  * Keeps exactly one interstitial ad pre-loaded at all times.
  *
- * - Auto-reloads immediately after show/fail.
+ * Key optimisation — **preload-on-show (double buffer):**
+ * The moment an ad becomes visible ([AdCallback.onShown]), the next ad
+ * starts loading in a separate manager. By the time the user dismisses
+ * the current ad, the next one is already loaded — zero gap.
+ *
+ *   readyManager   → loaded, waiting to be shown
+ *   showingManager → currently on screen (destroyed on dismiss)
+ *
  * - Exponential backoff on no-fill.
  * - Interval guard prevents showing twice in quick succession.
  */
 internal class InterstitialPreloader(private val config: SmartAdConfig) {
 
-    private var manager: InterstitialAdManager? = null
+    private var readyManager: InterstitialAdManager? = null
+    private var showingManager: InterstitialAdManager? = null
     private var lastShownAt = 0L
     private var appContext: Context? = null
+
     private val retry = AdRetryScheduler(
         tag          = "interstitial_preloader",
         maxRetries   = config.maxRetries,
@@ -33,74 +42,86 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
 
     fun start(context: Context) {
         appContext = context.applicationContext
-        load(context.applicationContext)
+        load()
     }
 
     /**
-     * Shows the preloaded interstitial if:
-     *  (a) an ad is ready, AND
-     *  (b) [SmartAdConfig.interstitialIntervalSec] seconds have elapsed.
-     *
-     * Returns true if the ad was shown, false otherwise.
+     * Shows the preloaded interstitial if ready and the interval has passed.
+     * Triggers the next preload automatically via [AdCallback.onShown].
      */
     fun tryShow(activity: Activity): Boolean {
-        val mgr = manager ?: return false.also {
+        val mgr = readyManager
+        if (mgr == null || !mgr.isReady()) {
             AdLog.d("interstitial_preloader", "not ready — still loading")
-        }
-        if (!mgr.isReady()) return false.also {
-            AdLog.d("interstitial_preloader", "not ready — waterfall in progress")
+            return false
         }
         val elapsed = System.currentTimeMillis() - lastShownAt
         val intervalMs = config.interstitialIntervalSec * 1_000L
-        if (elapsed < intervalMs) return false.also {
+        if (elapsed < intervalMs) {
             AdLog.d("interstitial_preloader",
                 "interval not passed — ${(intervalMs - elapsed) / 1000}s remaining")
+            return false
         }
         lastShownAt = System.currentTimeMillis()
+
+        // Promote ready → showing; readyManager freed for the next preload
+        showingManager = mgr
+        readyManager = null
         mgr.show(activity)
         return true
     }
 
-    val isReady: Boolean get() = manager?.isReady() == true
+    val isReady: Boolean get() = readyManager?.isReady() == true
 
     fun destroy() {
         retry.cancel()
-        manager?.destroy()
-        manager = null
+        readyManager?.destroy()
+        showingManager?.destroy()
+        readyManager = null
+        showingManager = null
         appContext = null
     }
 
     // ── Internal ─────────────────────────────────────────────────────
 
-    private fun load(context: Context) {
+    /** Loads a fresh interstitial into [readyManager]. */
+    private fun load() {
+        val context = appContext ?: return
         val adConfig = AdUnitConfig(
             placementKey = "smart_interstitial",
             format       = AdFormat.INTERSTITIAL,
             waterfall    = config.interstitialUnits(),
         )
         val mgr = InterstitialAdManager(adConfig)
-        manager = mgr
+
         mgr.load(context, object : AdCallback {
             override fun onLoaded(network: AdNetwork) {
                 AdLog.d("interstitial_preloader", "ready via $network")
+                readyManager = mgr
                 retry.reset()
             }
             override fun onFailedToLoad(error: AdError) {
                 AdLog.w("interstitial_preloader", "failed: $error")
-                // Exponential backoff retry
-                retry.schedule { load(context) }
+                retry.schedule { load() }
+            }
+            override fun onShown(network: AdNetwork) {
+                // ✅ Ad is now visible — preload the NEXT ad immediately
+                // so it's ready before the user dismisses this one.
+                AdLog.d("interstitial_preloader", "shown via $network — preloading next")
+                load()
             }
             override fun onDismissed(network: AdNetwork) {
-                // Reload immediately after dismiss so next show is instant
-                mgr.destroy()
-                manager = null
-                load(context)
+                // Current ad finished — free the manager that just showed.
+                showingManager?.destroy()
+                showingManager = null
+                // Safety net: if the on-show preload somehow failed, retry.
+                if (readyManager == null && !retry.isExhausted) load()
             }
             override fun onFailedToShow(error: AdError) {
                 AdLog.w("interstitial_preloader", "show failed: $error")
-                mgr.destroy()
-                manager = null
-                load(context)
+                showingManager?.destroy()
+                showingManager = null
+                if (readyManager == null) load()
             }
         })
     }
