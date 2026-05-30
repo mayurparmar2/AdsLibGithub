@@ -5,12 +5,10 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.ads.adslib.AdsSdk
 import com.ads.adslib.admob.banner.BannerAdManager
 import com.ads.adslib.admob.interstitial.InterstitialAdManager
 import com.ads.adslib.admob.native_ad.NativeAdManager
 import com.ads.adslib.admob.rewarded.RewardedAdManager
-import com.ads.adslib.consent.ConsentManager
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
@@ -38,55 +36,47 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.main_activity)
 
         findViewById<Button>(R.id.showInterstitial).setOnClickListener {
-            if (::interstitialManager.isInitialized && interstitialManager.isReady()) {
+            if (::interstitialManager.isInitialized && interstitialManager.isReady())
                 interstitialManager.show(this)
-            } else {
+            else
                 toast("⏳ Interstitial loading...")
-            }
         }
 
         findViewById<Button>(R.id.showRewarded).setOnClickListener {
-            if (::rewardedManager.isInitialized && rewardedManager.isReady()) {
+            if (::rewardedManager.isInitialized && rewardedManager.isReady())
                 rewardedManager.show(this)
-            } else {
+            else
                 toast("⏳ Rewarded loading...")
-            }
         }
 
-        initAds()
-    }
-
-    // Consent → SDK init → load all ads
-    private fun initAds() {
-        val consent = ConsentManager(this)
-        consent.gatherConsent(activity = this, testDeviceId = null) {
-            if (consent.canRequestAds) {
-                AdsSdk.initialize(
-                    context       = this,
-                    debug         = true,
-                    testDeviceIds = listOf("EMULATOR")
-                ) {
-                    toast("✅ AdsSdk ready!")
-                    loadInterstitial()
-                    loadRewarded()
-                    loadBanner()
-                    loadNative()
-                }
-            } else {
-                toast("⚠️ Consent na madyo — ads load nahi thay")
-            }
-        }
+        // Consent + SDK init — then load all ads
+        AdsInitializer.init(
+            activity  = this,
+            onReady   = { loadAllAds() },
+            onBlocked = { toast("⚠️ Consent na madyo — ads load nahi thay") }
+        )
     }
 
     // ---------------------------------------------------------------
-    // Interstitial — waterfall: AdMob → Meta → Unity (future)
+    // Load all formats once SDK is ready
+    // ---------------------------------------------------------------
+    private fun loadAllAds() {
+        toast("✅ AdsSdk ready!")
+        loadInterstitial()
+        loadRewarded()
+        loadBanner()
+        loadNative()
+    }
+
+    // ---------------------------------------------------------------
+    // Interstitial — waterfall: AdMob → Meta → Unity
     // ---------------------------------------------------------------
     private fun loadInterstitial() {
         val config = AdUnitConfig(
             placementKey = "main_interstitial",
             format       = AdFormat.INTERSTITIAL,
             waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, INTERSTITIAL_TEST_ID)
+                NetworkAdUnit(AdNetwork.ADMOB, INTERSTITIAL_TEST_ID),
                 // NetworkAdUnit(AdNetwork.META,  "META_PLACEMENT_ID"),
                 // NetworkAdUnit(AdNetwork.UNITY, "UNITY_PLACEMENT_ID"),
             )
@@ -107,14 +97,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------
-    // Rewarded — waterfall: AdMob → Meta → Unity (future)
+    // Rewarded — waterfall: AdMob → Meta → Unity
     // ---------------------------------------------------------------
     private fun loadRewarded() {
         val config = AdUnitConfig(
             placementKey = "main_rewarded",
             format       = AdFormat.REWARDED,
             waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, REWARDED_TEST_ID)
+                NetworkAdUnit(AdNetwork.ADMOB, REWARDED_TEST_ID),
                 // NetworkAdUnit(AdNetwork.META,  "META_REWARDED_PLACEMENT"),
                 // NetworkAdUnit(AdNetwork.UNITY, "UNITY_REWARDED_PLACEMENT"),
             )
@@ -126,7 +116,7 @@ class MainActivity : AppCompatActivity() {
             override fun onFailedToLoad(error: AdError) =
                 toast("❌ Rewarded fail: ${error.message}")
             override fun onRewardEarned(type: String, amount: Int) =
-                toast("🏆 Reward earned: $amount $type")   // yahan game currency aapjo
+                toast("🏆 Reward: $amount $type")
             override fun onDismissed(network: AdNetwork) {
                 rewardedManager.destroy()
                 loadRewarded()
@@ -137,30 +127,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     // ---------------------------------------------------------------
-    // Native — waterfall: AdMob → Meta (future)
-    // ---------------------------------------------------------------
-    private fun loadNative() {
-        val config = AdUnitConfig(
-            placementKey = "main_native",
-            format       = AdFormat.NATIVE,
-            waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, NATIVE_TEST_ID)
-                // NetworkAdUnit(AdNetwork.META, "META_NATIVE_PLACEMENT"),
-            )
-        )
-        nativeAdManager = NativeAdManager(config)
-        nativeAdManager.load(this, object : AdCallback {
-            override fun onLoaded(network: AdNetwork) {
-                nativeAdManager.attach(findViewById<LinearLayout>(R.id.native_ad))
-                toast("🖼 Native loaded via $network")
-            }
-            override fun onFailedToLoad(error: AdError) =
-                toast("❌ Native fail: ${error.message}")
-        })
-    }
-
-    // ---------------------------------------------------------------
-    // Banner — waterfall: AdMob → Meta → Unity (future)
+    // Banner — waterfall: AdMob → Meta → Unity
     // ---------------------------------------------------------------
     private fun loadBanner() {
         val config = AdUnitConfig(
@@ -168,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             format       = AdFormat.BANNER,
             bannerSize   = BannerAdSize.ADAPTIVE,
             waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, BANNER_TEST_ID)
+                NetworkAdUnit(AdNetwork.ADMOB, BANNER_TEST_ID),
                 // NetworkAdUnit(AdNetwork.META,  "META_BANNER_PLACEMENT"),
                 // NetworkAdUnit(AdNetwork.UNITY, "UNITY_BANNER_PLACEMENT"),
             )
@@ -181,6 +148,29 @@ class MainActivity : AppCompatActivity() {
             }
             override fun onFailedToLoad(error: AdError) =
                 toast("❌ Banner fail: ${error.message}")
+        })
+    }
+
+    // ---------------------------------------------------------------
+    // Native — waterfall: AdMob → Meta
+    // ---------------------------------------------------------------
+    private fun loadNative() {
+        val config = AdUnitConfig(
+            placementKey = "main_native",
+            format       = AdFormat.NATIVE,
+            waterfall    = listOf(
+                NetworkAdUnit(AdNetwork.ADMOB, NATIVE_TEST_ID),
+                // NetworkAdUnit(AdNetwork.META, "META_NATIVE_PLACEMENT"),
+            )
+        )
+        nativeAdManager = NativeAdManager(config)
+        nativeAdManager.load(this, object : AdCallback {
+            override fun onLoaded(network: AdNetwork) {
+                nativeAdManager.attach(findViewById<LinearLayout>(R.id.native_ad))
+                toast("🖼 Native loaded via $network")
+            }
+            override fun onFailedToLoad(error: AdError) =
+                toast("❌ Native fail: ${error.message}")
         })
     }
 
@@ -198,8 +188,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        if (::bannerManager.isInitialized)      bannerManager.destroy()
-        if (::nativeAdManager.isInitialized)    nativeAdManager.destroy()
+        if (::bannerManager.isInitialized)       bannerManager.destroy()
+        if (::nativeAdManager.isInitialized)     nativeAdManager.destroy()
         if (::interstitialManager.isInitialized) interstitialManager.destroy()
         if (::rewardedManager.isInitialized)     rewardedManager.destroy()
         super.onDestroy()
