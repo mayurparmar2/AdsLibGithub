@@ -105,11 +105,25 @@ abstract class MyLibrary : Application() {
             AdsSdk.remoteConfig.init(
                 defaults                = provideRemoteConfigDefaults(),
                 minFetchIntervalSeconds = if (isDebugBuild()) 0L else 3600L
-            )
+            ) {
+                // After fetch: parse the structured ads JSON (if provided) into
+                // AdsConfigRepository so screen-wise configs become available.
+                val json = AdsSdk.remoteConfig.getString(remoteConfigJsonKey())
+                if (json.isNotBlank()) {
+                    AdsConfigRepository.load(this, json)
+                }
+            }
         } catch (e: IllegalStateException) {
             // FirebaseApp not initialized — google-services plugin or
             // google-services.json missing. Hardcoded defaults will be used.
             Log.w("MyLibrary", "Remote Config unavailable: ${e.message}")
         }
     }
+
+    /**
+     * Remote Config key holding the structured ads JSON (the object with the
+     * `ads` section). Override if your key differs. Default: `ads_config`.
+     * Provide its default value via [provideRemoteConfigDefaults].
+     */
+    open fun remoteConfigJsonKey(): String = "ads_config"
 }

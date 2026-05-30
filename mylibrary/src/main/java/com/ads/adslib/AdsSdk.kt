@@ -100,7 +100,7 @@ object AdsSdk {
     /** Initialize Unity Ads once, if a game id is configured. */
     private fun initUnity(context: Context, gameId: String?, debug: Boolean) {
         if (gameId.isNullOrBlank()) return
-        if (UnityAds.isInitialized) return
+        if (UnityAds.isInitialized()) return
         UnityAds.initialize(
             context.applicationContext,
             gameId,
