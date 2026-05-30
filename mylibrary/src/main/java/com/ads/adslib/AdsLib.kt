@@ -53,7 +53,7 @@ object AdsLib {
                 AdsSdk.initialize(
                     context       = activity.applicationContext,
                     debug         = myLibrary.isDebugBuild(),
-                    testDeviceIds = if (myLibrary.isDebugBuild()) listOf("EMULATOR") else emptyList(),
+                    hasConsent    = consent.canRequestAds,
                     unityGameId   = AdsConfigRepository.unityGameId(),
                 ) {
                     myLibrary.onAdsReady()   // starts SmartAdManager preloaders

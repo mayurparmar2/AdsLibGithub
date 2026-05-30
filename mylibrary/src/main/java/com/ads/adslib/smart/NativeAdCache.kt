@@ -9,6 +9,7 @@ import android.widget.ImageView
 import android.widget.RatingBar
 import android.widget.TextView
 import com.ads.adslib.R
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.util.AdLog
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
@@ -48,6 +49,11 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
      * Safe to call frequently — respects the cache size limit.
      */
     fun prefetch(context: Context) {
+        // RC kill-switch for the whole format (once RC has loaded).
+        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.nativeEnabledAnywhere()) {
+            AdLog.d("native_cache", "native disabled in RC — skipping prefetch")
+            return
+        }
         pruneExpired()
         val needed = config.nativeCacheSize - cache.size - activeLoads
         if (needed <= 0) return
@@ -82,6 +88,12 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
 
     /** How many fresh (non-expired) ads are ready. */
     val readyCount: Int get() { pruneExpired(); return cache.size }
+
+    /** Re-arm the backoff and refill the cache when the app returns to foreground. */
+    fun onForeground(context: Context) {
+        retry.reset()
+        prefetch(context)
+    }
 
     /** Destroy all cached NativeAd objects. MUST call to avoid memory leaks. */
     fun destroy() {
@@ -131,6 +143,12 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
     private fun buildView(context: Context, ad: NativeAd): View {
         val view = LayoutInflater.from(context)
             .inflate(R.layout.admob_native_ad_template, null) as NativeAdView
+
+        // Restore full-width dropped by inflating with a null root.
+        view.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
 
         view.headlineView     = view.findViewById(R.id.ad_headline)
         view.bodyView         = view.findViewById(R.id.ad_body)

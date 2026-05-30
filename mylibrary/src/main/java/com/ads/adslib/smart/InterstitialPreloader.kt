@@ -3,6 +3,7 @@ package com.ads.adslib.smart
 import android.app.Activity
 import android.content.Context
 import com.ads.adslib.admob.interstitial.InterstitialAdManager
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdFormat
@@ -28,8 +29,13 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
 
     private var readyManager: InterstitialAdManager? = null
     private var showingManager: InterstitialAdManager? = null
+    private var loadingManager: InterstitialAdManager? = null
     private var lastShownAt = 0L
+    private var loadedAt = 0L
     private var appContext: Context? = null
+
+    // AdMob full-screen ads expire ~1h after load; refresh a touch earlier.
+    private val expiryMs = 55 * 60 * 1_000L
 
     private val retry = AdRetryScheduler(
         tag          = "interstitial_preloader",
@@ -50,6 +56,13 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
      * Triggers the next preload automatically via [AdCallback.onShown].
      */
     fun tryShow(activity: Activity): Boolean {
+        // Discard a stale (expired) preload before attempting to show.
+        if (readyManager != null && System.currentTimeMillis() - loadedAt > expiryMs) {
+            AdLog.d("interstitial_preloader", "preloaded ad expired — discarding & reloading")
+            readyManager?.destroy()
+            readyManager = null
+            load()
+        }
         val mgr = readyManager
         if (mgr == null || !mgr.isReady()) {
             AdLog.d("interstitial_preloader", "not ready — still loading")
@@ -71,14 +84,24 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
         return true
     }
 
-    val isReady: Boolean get() = readyManager?.isReady() == true
+    val isReady: Boolean
+        get() = readyManager?.isReady() == true &&
+            System.currentTimeMillis() - loadedAt <= expiryMs
+
+    /** Re-arm the backoff and resume preloading when the app returns to foreground. */
+    fun onForeground() {
+        retry.reset()
+        if (readyManager?.isReady() != true) load()
+    }
 
     fun destroy() {
         retry.cancel()
         readyManager?.destroy()
         showingManager?.destroy()
+        loadingManager?.destroy()
         readyManager = null
         showingManager = null
+        loadingManager = null
         appContext = null
     }
 
@@ -87,21 +110,34 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
     /** Loads a fresh interstitial into [readyManager]. */
     private fun load() {
         val context = appContext ?: return
+        // Guard against concurrent loads (onShown + onDismissed both call load()).
+        if (loadingManager != null) return
+        // RC kill-switch for the whole format (once RC has loaded).
+        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.interstitialEnabledAnywhere()) {
+            AdLog.d("interstitial_preloader", "interstitial disabled in RC — skipping load")
+            return
+        }
         val adConfig = AdUnitConfig(
             placementKey = "smart_interstitial",
             format       = AdFormat.INTERSTITIAL,
             waterfall    = config.interstitialUnits(),
         )
         val mgr = InterstitialAdManager(adConfig)
+        loadingManager = mgr
 
         mgr.load(context, object : AdCallback {
             override fun onLoaded(network: AdNetwork) {
                 AdLog.d("interstitial_preloader", "ready via $network")
+                loadingManager = null
+                // Discard any stale predecessor before swapping in the fresh one.
+                if (readyManager !== mgr) readyManager?.destroy()
                 readyManager = mgr
+                loadedAt = System.currentTimeMillis()
                 retry.reset()
             }
             override fun onFailedToLoad(error: AdError) {
                 AdLog.w("interstitial_preloader", "failed: $error")
+                loadingManager = null
                 retry.schedule { load() }
             }
             override fun onShown(network: AdNetwork) {

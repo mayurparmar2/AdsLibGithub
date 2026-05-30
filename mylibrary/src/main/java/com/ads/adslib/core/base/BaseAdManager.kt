@@ -5,8 +5,11 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import com.ads.adslib.core.callback.AdCallback
+import com.ads.adslib.core.callback.FullScreenCallbacks
+import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
+import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.ads.adslib.util.AdLog
@@ -53,21 +56,24 @@ abstract class BaseAdManager(
         }
 
         this.callback = callback
-        loaders = config.activeUnits.mapNotNull { createLoader(it) }
+        val activeUnits = config.activeUnits
 
-        if (loaders.isEmpty()) {
-            fail(AdError(config.activeUnits.firstOrNull()?.network
-                ?: return failNoConfig(callback),
+        if (activeUnits.isEmpty()) {
+            AdLog.e(config.placementKey, "No networks configured")
+            fail(AdError(activeUnits.firstOrNull()?.network ?: AdNetwork.ADMOB,
                 -1, "No active/supported networks for ${config.placementKey}"))
+            return
+        }
+
+        loaders = activeUnits.mapNotNull { createLoader(it) }
+        if (loaders.isEmpty()) {
+            fail(AdError(activeUnits.first().network,
+                -1, "No supported loader for ${config.placementKey}"))
             return
         }
 
         state = AdLoadState.LOADING
         attempt(context, 0)
-    }
-
-    private fun failNoConfig(callback: AdCallback?) {
-        AdLog.e(config.placementKey, "No networks configured")
     }
 
     /** Recursive waterfall step: try loader at [index], fall through on failure. */
@@ -134,4 +140,34 @@ abstract class BaseAdManager(
     protected fun dispatch(block: AdCallback.() -> Unit) {
         callback?.let { cb -> main.post { cb.block() } }
     }
+
+    /**
+     * Reset to a reloadable state after a full-screen ad is dismissed or fails
+     * to show. The consumed loader can no longer serve, so clear it and return
+     * [state] to IDLE so a subsequent [load] starts fresh.
+     */
+    protected fun onFullScreenClosed() {
+        loadedLoader = null
+        if (state == AdLoadState.SHOWING || state == AdLoadState.LOADED) {
+            state = AdLoadState.IDLE
+        }
+    }
+
+    /**
+     * Standard show-time callback wiring for full-screen loaders: every event is
+     * marshalled to the main thread via [dispatch], and dismiss / show-failure
+     * also reset the manager state through [onFullScreenClosed].
+     *
+     * Rewards are forwarded only when the active callback is a [RewardCallback].
+     */
+    protected fun fullScreenCallbacks(): FullScreenCallbacks = FullScreenCallbacks(
+        onShown        = { net -> dispatch { onShown(net) } },
+        onDismissed    = { net -> onFullScreenClosed(); dispatch { onDismissed(net) } },
+        onClicked      = { net -> dispatch { onClicked(net) } },
+        onImpression   = { net -> dispatch { onImpression(net) } },
+        onFailedToShow = { err -> onFullScreenClosed(); dispatch { onFailedToShow(err) } },
+        onRewardEarned = { type, amount ->
+            dispatch { (this as? RewardCallback)?.onRewardEarned(type, amount) }
+        },
+    )
 }

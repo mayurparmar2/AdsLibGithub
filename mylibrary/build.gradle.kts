@@ -52,6 +52,11 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics-ktx")
 
     implementation("androidx.core:core-ktx:1.15.0")
+
+    // Unit tests. org.json is only a stub in android.jar, so pull the real
+    // implementation onto the JVM test classpath to exercise RemoteConfigParser.
+    testImplementation("junit:junit:4.13.2")
+    testImplementation("org.json:json:20231013")
 }
 
 afterEvaluate {

@@ -76,6 +76,31 @@ object AdsConfigRepository {
             ?.let { AdUnitConfig("app_open", AdFormat.APP_OPEN, it) }
     }
 
+    /** Highest-priority enabled App Open ad unit id, or null if none/disabled. */
+    fun appOpenUnitId(): String? = appOpenConfig()?.waterfall?.firstOrNull()?.adUnitId
+
+    // ── Format-level enable checks (for SmartAdManager preloaders) ────────
+    // SmartAdManager preloads app-wide (not per screen); these answer
+    // "is this format enabled by RC for ANY provider" so a preloader can be
+    // skipped entirely when RC turns the format off.
+
+    fun interstitialEnabledAnywhere(): Boolean =
+        config.enabled && config.providerPriority.any { net ->
+            config.providers[net]?.let { it.enabled && it.interstitialEnabled } == true
+        }
+
+    fun rewardedEnabledAnywhere(): Boolean =
+        config.enabled && config.providerPriority.any { net ->
+            config.providers[net]?.let { it.enabled && it.rewardedEnabled } == true
+        }
+
+    fun nativeEnabledAnywhere(): Boolean =
+        config.enabled && config.providerPriority.any { net ->
+            config.providers[net]?.let { p ->
+                p.enabled && p.native.values.any { it.enabled && it.adId.isNotBlank() }
+            } == true
+        }
+
     // ── Interstitial frequency ───────────────────────────────────────
 
     /** Highest-priority enabled provider's interstitial frequency for the build. */

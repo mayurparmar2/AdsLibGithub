@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -57,6 +58,12 @@ class MetaNativeLoader(
     private fun inflateAndPopulate(context: Context, ad: FanNativeAd): View {
         val view = LayoutInflater.from(context)
             .inflate(R.layout.native_ad_layout_1, null)
+
+        // Restore full-width dropped by inflating with a null root.
+        view.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
 
         val iconView     = view.findViewById<MediaView>(R.id.native_ad_icon)
         val titleView    = view.findViewById<TextView>(R.id.native_ad_title)

@@ -31,5 +31,7 @@ class App : MyLibrary() {
         // overridden from Firebase Remote Config; this default lets the demo
         // run offline. See [AdsConfigDefaults] for the JSON.
         "ads_config" to AdsConfigDefaults.ADS_CONFIG,
+        // Minimum seconds between two interstitial shows (read by MyLibrary.onAdsReady).
+        "interstitial_interval" to 30L,
     )
 }

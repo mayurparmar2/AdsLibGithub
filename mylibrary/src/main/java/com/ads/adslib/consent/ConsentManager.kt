@@ -1,10 +1,13 @@
 package com.ads.adslib.consent
 
 import android.app.Activity
+import android.os.Handler
+import android.os.Looper
 import com.ads.adslib.util.AdLog
 import com.google.android.ump.ConsentInformation
 import com.google.android.ump.ConsentRequestParameters
 import com.google.android.ump.UserMessagingPlatform
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Thin wrapper over Google's User Messaging Platform (UMP) SDK for GDPR/consent.
@@ -25,14 +28,31 @@ class ConsentManager(activity: Activity) {
      *
      * @param activity current activity (form host).
      * @param testDeviceId optional hashed device id to force EEA geography in debug.
-     * @param onComplete invoked when the flow finishes (success or handled error);
-     *                   inspect [canRequestAds] afterwards.
+     * @param timeoutMs safety net — if the UMP SDK never calls back (network hang),
+     *   [onComplete] is still invoked after this many ms so the app is never stuck.
+     * @param onComplete invoked exactly once when the flow finishes (success, handled
+     *   error, or timeout); inspect [canRequestAds] afterwards.
      */
     fun gatherConsent(
         activity: Activity,
         testDeviceId: String? = null,
+        timeoutMs: Long = 8_000L,
         onComplete: () -> Unit
     ) {
+        // Ensure onComplete runs exactly once (UMP success/error OR our timeout).
+        val done = AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        val finish = {
+            if (done.compareAndSet(false, true)) {
+                handler.removeCallbacksAndMessages(null)
+                onComplete()
+            }
+        }
+        handler.postDelayed({
+            AdLog.w("consent", "UMP timed out after ${timeoutMs}ms — proceeding")
+            finish()
+        }, timeoutMs)
+
         val paramsBuilder = ConsentRequestParameters.Builder()
         if (testDeviceId != null) {
             val debugSettings = com.google.android.ump.ConsentDebugSettings.Builder(activity)
@@ -50,12 +70,12 @@ class ConsentManager(activity: Activity) {
                     if (formError != null) {
                         AdLog.w("consent", "form error: ${formError.message}")
                     }
-                    onComplete()
+                    finish()
                 }
             },
             { requestError ->
                 AdLog.w("consent", "info update failed: ${requestError.message}")
-                onComplete()
+                finish()
             }
         )
     }

@@ -4,6 +4,9 @@ import android.app.Activity
 import android.app.Application
 import android.content.Context
 import android.view.ViewGroup
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.ProcessLifecycleOwner
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.util.AdLog
 
@@ -63,6 +66,16 @@ object SmartAdManager {
     private var appOpenPreloader: AppOpenAdPreloader? = null
     private var rewardedPreloader: RewardedAdPreloader? = null
     private var nativeCache: NativeAdCache? = null
+    private var appRef: Application? = null
+
+    /** Re-arms every preloader's backoff each time the app returns to foreground. */
+    private val foregroundObserver = object : DefaultLifecycleObserver {
+        override fun onStart(owner: LifecycleOwner) {
+            interstitialPreloader?.onForeground()
+            rewardedPreloader?.onForeground()
+            appRef?.let { nativeCache?.onForeground(it) }
+        }
+    }
 
     @Volatile
     private var initialized = false
@@ -79,11 +92,14 @@ object SmartAdManager {
             return
         }
         initialized = true
+        appRef = application
 
         interstitialPreloader = InterstitialPreloader(config).also { it.start(application) }
         appOpenPreloader      = AppOpenAdPreloader(application, config).also { it.start() }
         rewardedPreloader     = RewardedAdPreloader(config)
         nativeCache           = NativeAdCache(config).also { it.prefetch(application) }
+
+        ProcessLifecycleOwner.get().lifecycle.addObserver(foregroundObserver)
 
         AdLog.d("smart_ad_manager", "initialized — preloading started")
     }
@@ -170,6 +186,7 @@ object SmartAdManager {
      * Do NOT call from Activity.onDestroy — preloaders survive rotation.
      */
     fun destroy() {
+        ProcessLifecycleOwner.get().lifecycle.removeObserver(foregroundObserver)
         interstitialPreloader?.destroy()
         appOpenPreloader?.destroy()
         rewardedPreloader?.release()
@@ -178,6 +195,7 @@ object SmartAdManager {
         appOpenPreloader      = null
         rewardedPreloader     = null
         nativeCache           = null
+        appRef                = null
         initialized           = false
         AdLog.d("smart_ad_manager", "destroyed")
     }

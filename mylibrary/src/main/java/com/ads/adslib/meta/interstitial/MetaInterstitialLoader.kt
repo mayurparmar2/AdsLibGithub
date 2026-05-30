@@ -3,6 +3,7 @@ package com.ads.adslib.meta.interstitial
 import android.app.Activity
 import android.content.Context
 import com.ads.adslib.core.base.NetworkAdLoader
+import com.ads.adslib.core.callback.FullScreenCallbacks
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
@@ -14,11 +15,7 @@ import com.facebook.ads.InterstitialAdListener
 
 class MetaInterstitialLoader(
     unit: NetworkAdUnit,
-    private val onShownCb: (AdNetwork) -> Unit,
-    private val onDismissedCb: (AdNetwork) -> Unit,
-    private val onClickedCb: (AdNetwork) -> Unit,
-    private val onImpressionCb: (AdNetwork) -> Unit,
-    private val onFailedToShowCb: (AdError) -> Unit
+    private val cb: FullScreenCallbacks
 ) : NetworkAdLoader(unit) {
 
     private var interstitialAd: FanInterstitialAd? = null
@@ -40,15 +37,15 @@ class MetaInterstitialLoader(
                 }
                 override fun onInterstitialDisplayed(a: Ad) {
                     state = AdLoadState.SHOWING
-                    onShownCb(AdNetwork.META)
+                    cb.onShown(AdNetwork.META)
                 }
                 override fun onInterstitialDismissed(a: Ad) {
                     state = AdLoadState.DISMISSED
                     interstitialAd = null
-                    onDismissedCb(AdNetwork.META)
+                    cb.onDismissed(AdNetwork.META)
                 }
-                override fun onAdClicked(a: Ad) = onClickedCb(AdNetwork.META)
-                override fun onLoggingImpression(a: Ad) = onImpressionCb(AdNetwork.META)
+                override fun onAdClicked(a: Ad) = cb.onClicked(AdNetwork.META)
+                override fun onLoggingImpression(a: Ad) = cb.onImpression(AdNetwork.META)
             })
             .build()
 
@@ -60,7 +57,7 @@ class MetaInterstitialLoader(
         if (ad != null && ad.isAdLoaded) {
             ad.show()
         } else {
-            onFailedToShowCb(AdError(AdNetwork.META, -3, "Meta interstitial not ready at show()"))
+            cb.onFailedToShow(AdError(AdNetwork.META, -3, "Meta interstitial not ready at show()"))
         }
     }
 

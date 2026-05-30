@@ -40,55 +40,18 @@ import com.ads.adslib.unity.rewarded.UnityRewardedLoader
  */
 class RewardedAdManager(config: AdUnitConfig) : BaseAdManager(config) {
 
-    private var rewardCallback: RewardCallback? = null
-
     /**
-     * Load with a [RewardCallback]. [RewardCallback] extends [AdCallback] so all base
-     * lifecycle events (onLoaded, onShown, onDismissed, onFailedToLoad) fire normally.
+     * Load with a [RewardCallback]. It extends AdCallback so all base lifecycle
+     * events (onLoaded, onShown, onDismissed, onFailedToLoad) fire normally, and
+     * [RewardCallback.onRewardEarned] is delivered via [fullScreenCallbacks].
      */
     fun load(context: Context, callback: RewardCallback?) {
-        rewardCallback = callback
         super.load(context, callback)   // RewardCallback IS-A AdCallback ✓
     }
 
     override fun createLoader(unit: NetworkAdUnit): NetworkAdLoader? = when (unit.network) {
-        AdNetwork.ADMOB -> AdMobRewardedLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onImpressionCb   = { net -> dispatch { onImpression(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } },
-            onRewardEarnedCb = { type, amount ->
-                main.post { rewardCallback?.onRewardEarned(type, amount) }
-            }
-        )
-        AdNetwork.META -> MetaRewardedLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onImpressionCb   = { net -> dispatch { onImpression(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } },
-            onRewardEarnedCb = { type, amount ->
-                main.post { rewardCallback?.onRewardEarned(type, amount) }
-            }
-        )
-        AdNetwork.UNITY -> UnityRewardedLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } },
-            onRewardEarnedCb = { type, amount ->
-                main.post { rewardCallback?.onRewardEarned(type, amount) }
-            }
-        )
-        else -> null
-    }
-
-    override fun destroy() {
-        rewardCallback = null
-        super.destroy()
+        AdNetwork.ADMOB -> AdMobRewardedLoader(unit, fullScreenCallbacks())
+        AdNetwork.META  -> MetaRewardedLoader(unit, fullScreenCallbacks())
+        AdNetwork.UNITY -> UnityRewardedLoader(unit, fullScreenCallbacks())
     }
 }

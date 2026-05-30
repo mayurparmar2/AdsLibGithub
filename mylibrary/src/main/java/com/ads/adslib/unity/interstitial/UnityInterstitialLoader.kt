@@ -3,6 +3,7 @@ package com.ads.adslib.unity.interstitial
 import android.app.Activity
 import android.content.Context
 import com.ads.adslib.core.base.NetworkAdLoader
+import com.ads.adslib.core.callback.FullScreenCallbacks
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
@@ -14,10 +15,7 @@ import com.unity3d.ads.UnityAdsShowOptions
 
 class UnityInterstitialLoader(
     unit: NetworkAdUnit,
-    private val onShownCb: (AdNetwork) -> Unit,
-    private val onDismissedCb: (AdNetwork) -> Unit,
-    private val onClickedCb: (AdNetwork) -> Unit,
-    private val onFailedToShowCb: (AdError) -> Unit
+    private val cb: FullScreenCallbacks
 ) : NetworkAdLoader(unit) {
 
     override fun load(context: Context, onLoaded: () -> Unit, onFailed: (AdError) -> Unit) {
@@ -43,14 +41,14 @@ class UnityInterstitialLoader(
         UnityAds.show(activity, unit.adUnitId, UnityAdsShowOptions(),
             object : IUnityAdsShowListener {
                 override fun onUnityAdsShowStart(placementId: String) =
-                    onShownCb(AdNetwork.UNITY)
+                    cb.onShown(AdNetwork.UNITY)
 
                 override fun onUnityAdsShowComplete(
                     placementId: String,
                     completionState: UnityAds.UnityAdsShowCompletionState
                 ) {
                     state = AdLoadState.DISMISSED
-                    onDismissedCb(AdNetwork.UNITY)
+                    cb.onDismissed(AdNetwork.UNITY)
                 }
 
                 override fun onUnityAdsShowFailure(
@@ -59,11 +57,11 @@ class UnityInterstitialLoader(
                     message: String
                 ) {
                     state = AdLoadState.FAILED
-                    onFailedToShowCb(AdError(AdNetwork.UNITY, error.ordinal, message))
+                    cb.onFailedToShow(AdError(AdNetwork.UNITY, error.ordinal, message))
                 }
 
                 override fun onUnityAdsShowClick(placementId: String) =
-                    onClickedCb(AdNetwork.UNITY)
+                    cb.onClicked(AdNetwork.UNITY)
             }
         )
     }

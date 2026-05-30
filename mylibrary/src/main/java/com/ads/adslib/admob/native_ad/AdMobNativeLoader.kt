@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.RatingBar
@@ -58,6 +59,13 @@ class AdMobNativeLoader(
     private fun inflateAndPopulate(context: Context, ad: NativeAd): NativeAdView {
         val view = LayoutInflater.from(context)
             .inflate(R.layout.admob_native_ad_template, null) as NativeAdView
+
+        // Inflated with a null root, so the XML root width/height are dropped —
+        // restore full-width so the ad fills its container instead of wrapping.
+        view.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+        )
 
         // Register each asset view with NativeAdView before setting content
         view.headlineView      = view.findViewById(R.id.ad_headline)

@@ -72,6 +72,13 @@ abstract class MyLibrary : Application() {
      * Starts all ad preloaders via [SmartAdManager].
      */
     internal fun onAdsReady() {
+        // Remote Config kill-switch: if RC has loaded and ads are disabled,
+        // do NOT start any preloader (interstitial / app-open / native / rewarded).
+        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.adsEnabled) {
+            Log.w("MyLibrary", "ads_enabled=false in Remote Config — preloaders not started")
+            return
+        }
+
         val intervalSec = AdsSdk.remoteConfig
             .getLong("interstitial_interval")
             .takeIf { it > 0 } ?: 30L

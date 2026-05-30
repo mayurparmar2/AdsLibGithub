@@ -3,6 +3,7 @@ package com.ads.adslib.smart
 import android.app.Activity
 import android.content.Context
 import com.ads.adslib.admob.rewarded.RewardedAdManager
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdFormat
@@ -36,9 +37,14 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
 
     private var readyManager: RewardedAdManager? = null
     private var showingManager: RewardedAdManager? = null
+    private var loadingManager: RewardedAdManager? = null
     private var activeCallback: RewardCallback? = null
     private var isPrepared = false
+    private var loadedAt = 0L
     private var appContext: Context? = null
+
+    // AdMob full-screen ads expire ~1h after load; refresh a touch earlier.
+    private val expiryMs = 55 * 60 * 1_000L
 
     private val retry = AdRetryScheduler(
         tag         = "rewarded_preloader",
@@ -71,6 +77,13 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
         callback: RewardCallback,
         onNotReady: () -> Unit = {}
     ) {
+        // Discard a stale (expired) preload before attempting to show.
+        if (readyManager != null && System.currentTimeMillis() - loadedAt > expiryMs) {
+            AdLog.d("rewarded_preloader", "preloaded ad expired — discarding & reloading")
+            readyManager?.destroy()
+            readyManager = null
+            load()
+        }
         val mgr = readyManager
         if (mgr == null || !mgr.isReady()) {
             AdLog.d("rewarded_preloader", "not ready")
@@ -88,35 +101,59 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
         retry.cancel()
         readyManager?.destroy()
         showingManager?.destroy()
+        loadingManager?.destroy()
         readyManager = null
         showingManager = null
+        loadingManager = null
         activeCallback = null
         isPrepared = false
         AdLog.d("rewarded_preloader", "released")
     }
 
-    val isReady: Boolean get() = readyManager?.isReady() == true
+    val isReady: Boolean
+        get() = readyManager?.isReady() == true &&
+            System.currentTimeMillis() - loadedAt <= expiryMs
+
+    /** Re-arm the backoff and resume preloading (only if a screen prepared us). */
+    fun onForeground() {
+        if (!isPrepared) return
+        retry.reset()
+        if (readyManager?.isReady() != true) load()
+    }
 
     // ── Internal ─────────────────────────────────────────────────────
 
     /** Loads a fresh rewarded ad into [readyManager]. */
     private fun load() {
         val context = appContext ?: return
+        // Guard against concurrent loads (onShown + onDismissed both call load()).
+        if (loadingManager != null) return
+        // RC kill-switch for the whole format (once RC has loaded).
+        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.rewardedEnabledAnywhere()) {
+            AdLog.d("rewarded_preloader", "rewarded disabled in RC — skipping load")
+            return
+        }
         val adConfig = AdUnitConfig(
             placementKey = "smart_rewarded",
             format       = AdFormat.REWARDED,
             waterfall    = config.rewardedUnits(),
         )
         val mgr = RewardedAdManager(adConfig)
+        loadingManager = mgr
 
         mgr.load(context, object : RewardCallback {
             override fun onLoaded(network: AdNetwork) {
                 AdLog.d("rewarded_preloader", "ready via $network")
+                loadingManager = null
+                // Discard any stale predecessor before swapping in the fresh one.
+                if (readyManager !== mgr) readyManager?.destroy()
                 readyManager = mgr
+                loadedAt = System.currentTimeMillis()
                 retry.reset()
             }
             override fun onFailedToLoad(error: AdError) {
                 AdLog.w("rewarded_preloader", "failed: $error")
+                loadingManager = null
                 retry.schedule { load() }
             }
             override fun onRewardEarned(type: String, amount: Int) {

@@ -57,6 +57,11 @@ class RemoteConfigManager {
     fun getLong(key: String): Long =
         remoteConfig?.getLong(key) ?: (localDefaults[key] as? Long ?: 0L)
 
-    fun getString(key: String): String =
-        remoteConfig?.getString(key) ?: (localDefaults[key] as? String ?: "")
+    fun getString(key: String): String {
+        // If RC is present but the value is still blank (e.g. defaults not yet
+        // applied / key not set remotely), fall back to the local default.
+        val rcValue = remoteConfig?.getString(key)
+        if (!rcValue.isNullOrBlank()) return rcValue
+        return localDefaults[key] as? String ?: ""
+    }
 }

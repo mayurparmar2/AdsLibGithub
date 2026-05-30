@@ -8,8 +8,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **waterfall fallback** across AdMob, Meta Audience Network, and Unity Ads for Banner,
 Interstitial, Native, Rewarded, App Open, and Splash formats.
 
-**Current status:** Core architecture + AdMob Interstitial fully implemented. Other formats
-and the Meta/Unity loaders plug into the same base classes but are not yet wired up.
+**Current status:** Fully implemented across all three networks (AdMob, Meta, Unity) and all
+formats (Banner, Interstitial, Native, Rewarded, App Open). Includes a `smart/` preloading
+layer (double-buffered interstitial/rewarded, app-open on foreground, native LRU cache) and a
+Remote-Config-driven `config/remote/` layer (`AdsConfigRepository`) that builds per-screen
+waterfalls. SDK init (incl. Meta/Unity consent forwarding) lives in `AdsSdk.initialize()`.
 
 ## Modules
 
@@ -18,7 +21,9 @@ and the Meta/Unity loaders plug into the same base classes but are not yet wired
 | `mylibrary` | `com.ads.adslib` | The publishable AAR library |
 | `app` | `com.demo.adslibsss` | Demo/test app that consumes `:mylibrary` |
 
-The `app` module has no Kotlin source files currently — only layouts and resources for manual testing.
+The `app` module demonstrates the full flow: `App.kt` (extends `MyLibrary`), `MainActivity.kt`
+(RC-driven per-screen banner/native/interstitial/rewarded), and `AdsConfigDefaults.kt` (offline
+fallback `ads_config` JSON).
 
 ## Build commands
 
@@ -55,19 +60,36 @@ If this path changes (e.g. Android Studio update), update `gradle.properties` ac
 
 ```
 com.ads.adslib
-├── AdsSdk.kt                      # singleton init entry-point (facade)
+├── AdsSdk.kt                      # SDK init facade (AdMob + Meta + Unity, consent forwarding)
+├── AdsLib.kt                      # Activity-level entry: consent → init → preloaders
+├── MyLibrary.kt                   # Application base class (Remote Config bootstrap)
 ├── core/
 │   ├── model/                     # AdNetwork, AdFormat, BannerAdSize, AdLoadState (enums)
 │   │                              # AdError, NetworkAdUnit, AdUnitConfig (data classes)
-│   ├── callback/                  # AdCallback, RewardCallback interfaces
+│   ├── callback/                  # AdCallback, RewardCallback, FullScreenCallbacks
 │   └── base/
 │       ├── NetworkAdLoader.kt     # abstract — 1 network × 1 format (one waterfall rung)
 │       └── BaseAdManager.kt       # abstract — owns ALL waterfall/fallback/threading logic
-├── admob/interstitial/
-│   ├── AdMobInterstitialLoader.kt # concrete NetworkAdLoader for AdMob interstitial
-│   └── InterstitialAdManager.kt  # concrete BaseAdManager — only implements createLoader()
-├── consent/ConsentManager.kt      # Google UMP (GDPR) wrapper
-├── config/RemoteConfigManager.kt  # Firebase Remote Config wrapper
+├── admob/{banner,interstitial,native_ad,rewarded}/   # AdMob loaders + per-format managers
+├── meta/{banner,interstitial,native_ad,rewarded}/    # Meta (FAN) loaders
+├── unity/{banner,interstitial,rewarded}/             # Unity loaders (no native)
+├── smart/                         # preloading layer:
+│   ├── SmartAdManager.kt          #   facade — wires the preloaders, re-arms on foreground
+│   ├── SmartAdConfig.kt           #   unit IDs + tuning (fallback when RC absent)
+│   ├── InterstitialPreloader.kt   #   double-buffered, expiry-aware
+│   ├── RewardedAdPreloader.kt     #   on-demand per screen, expiry-aware
+│   ├── AppOpenAdPreloader.kt      #   ProcessLifecycle foreground show, RC-gated
+│   ├── NativeAdCache.kt           #   LRU cache, prune-on-expiry
+│   ├── AdRetryScheduler.kt        #   exponential backoff (re-armed on foreground)
+│   └── FullScreenAdState.kt       #   guards App Open stacking on other full-screen ads
+├── config/
+│   ├── RemoteConfigManager.kt     # Firebase Remote Config wrapper (null-safe)
+│   └── remote/                    # JSON → per-screen waterfall:
+│       ├── RemoteConfigParser.kt  #   org.json parser (unit-tested)
+│       ├── AdsRemoteConfig.kt     #   parsed model
+│       ├── AdsConfigRepository.kt #   source of truth: per-screen AdUnitConfig builders
+│       └── FrequencyCapManager.kt #   count-based, SharedPreferences-persisted
+├── consent/ConsentManager.kt      # Google UMP (GDPR) wrapper, with timeout fallback
 └── util/AdLog.kt                  # logging (off by default, gated on debug flag)
 ```
 
@@ -97,7 +119,9 @@ reused for every format. Per-format managers only implement `createLoader(unit: 
 - Never call SDK init from individual loaders — initialization belongs in `AdsSdk.initialize()`.
 - Never request ads before `ConsentManager.canRequestAds` is `true`.
 - Never hardcode ad unit IDs in library source — they come from `AdUnitConfig`.
-- Meta and Unity loader implementations are not yet written; their `when` branches are commented out in `InterstitialAdManager`.
+- Full-screen loaders (AdMob/Meta/Unity interstitial & rewarded) take a single `FullScreenCallbacks` holder, wired once via `BaseAdManager.fullScreenCallbacks()` — do not reintroduce per-callback constructor params.
+- `BaseAdManager.onFullScreenClosed()` resets state to IDLE on dismiss/show-fail so a manager can be reloaded.
+- SDK init order in `AdsSdk.initialize()`: forward consent to Meta (`AdSettings.setDataProcessingOptions`) and Unity (`MetaData("gdpr.consent")`) BEFORE initializing them; never init a network SDK from a loader.
 
 ## Usage flow (reference for demo app / docs)
 

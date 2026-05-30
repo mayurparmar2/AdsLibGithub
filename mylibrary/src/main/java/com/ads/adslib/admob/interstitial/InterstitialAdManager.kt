@@ -23,28 +23,8 @@ import com.ads.adslib.unity.interstitial.UnityInterstitialLoader
 class InterstitialAdManager(config: AdUnitConfig) : BaseAdManager(config) {
 
     override fun createLoader(unit: NetworkAdUnit): NetworkAdLoader? = when (unit.network) {
-        AdNetwork.ADMOB -> AdMobInterstitialLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onImpressionCb   = { net -> dispatch { onImpression(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } }
-        )
-        AdNetwork.META -> MetaInterstitialLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onImpressionCb   = { net -> dispatch { onImpression(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } }
-        )
-        AdNetwork.UNITY -> UnityInterstitialLoader(
-            unit             = unit,
-            onShownCb        = { net -> dispatch { onShown(net) } },
-            onDismissedCb    = { net -> dispatch { onDismissed(net) } },
-            onClickedCb      = { net -> dispatch { onClicked(net) } },
-            onFailedToShowCb = { err -> dispatch { onFailedToShow(err) } }
-        )
+        AdNetwork.ADMOB -> AdMobInterstitialLoader(unit, fullScreenCallbacks())
+        AdNetwork.META  -> MetaInterstitialLoader(unit, fullScreenCallbacks())
+        AdNetwork.UNITY -> UnityInterstitialLoader(unit, fullScreenCallbacks())
     }
 }

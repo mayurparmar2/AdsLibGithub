@@ -40,18 +40,28 @@ class MainActivity : AppCompatActivity() {
         initAds()
     }
 
+    override fun onStart() {
+        super.onStart()
+        // Prepare rewarded on onStart/onStop (not onResume/onPause) so transient
+        // pauses (dialogs, permission prompts) don't tear down & reload the ad.
+        if (adsReady) SmartAdManager.prepareRewarded(this)
+    }
+
     override fun onResume() {
         super.onResume()
         if (::inlineBannerManager.isInitialized) inlineBannerManager.resume()
         if (::bottomBannerManager.isInitialized) bottomBannerManager.resume()
-        if (adsReady) SmartAdManager.prepareRewarded(this)
     }
 
     override fun onPause() {
         if (::inlineBannerManager.isInitialized) inlineBannerManager.pause()
         if (::bottomBannerManager.isInitialized) bottomBannerManager.pause()
-        if (adsReady) SmartAdManager.releaseRewarded()
         super.onPause()
+    }
+
+    override fun onStop() {
+        if (adsReady) SmartAdManager.releaseRewarded()
+        super.onStop()
     }
 
     override fun onDestroy() {
@@ -70,6 +80,10 @@ class MainActivity : AppCompatActivity() {
             when {
                 AdsConfigRepository.interstitialConfig("search") == null ->
                     toast("ℹ️ Interstitial disabled in config")
+                // Check readiness BEFORE consuming the frequency counter, so a
+                // not-ready tap never burns a frequency slot.
+                !SmartAdManager.isInterstitialReady ->
+                    toast("⏳ Interstitial not ready yet")
                 !AdsConfigRepository.shouldShowInterstitial("search") ->
                     toast("⏳ Frequency cap — skipped this time")
                 else ->
@@ -119,6 +133,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun onAdsReady() {
+        // Init is async (UMP consent + MobileAds). If the user left or rotated
+        // away during init, this Activity (and its binding) may be gone — bail
+        // before touching any view.
+        if (isFinishing || isDestroyed) return
         adsReady = true
 
         // Defensive: if the RC fetch callback didn't populate the repository

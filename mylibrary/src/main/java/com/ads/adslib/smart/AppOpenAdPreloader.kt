@@ -6,6 +6,7 @@ import android.os.Bundle
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.util.AdLog
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -71,6 +72,9 @@ internal class AppOpenAdPreloader(
         // Skip the very first foreground (cold start) — showing an App Open
         // on launch competes with the splash/first screen and is rarely
         // ready in time anyway.
+        // Re-arm retry on every real foreground so a previously exhausted
+        // backoff sequence can try loading again.
+        retry.reset()
         if (isFirstForeground) {
             isFirstForeground = false
             return
@@ -99,7 +103,16 @@ internal class AppOpenAdPreloader(
         return System.currentTimeMillis() - loadedAt < fourHoursMs
     }
 
+    /** Remote Config kill-switch — fail-open until RC has actually loaded. */
+    private fun adsAllowed(): Boolean =
+        !AdsConfigRepository.isLoaded || AdsConfigRepository.adsEnabled
+
     private fun showIfAvailable() {
+        // GUARD 0: Remote Config disabled ads entirely.
+        if (!adsAllowed()) {
+            AdLog.d("appopen_preloader", "skipped — ads disabled in Remote Config")
+            return
+        }
         // GUARD 1: never stack on another full-screen ad, or show right
         // after one was dismissed (the re-foreground race).
         if (FullScreenAdState.isShowing || FullScreenAdState.closedRecently()) {
@@ -146,9 +159,23 @@ internal class AppOpenAdPreloader(
     }
 
     private fun loadAd() {
+        if (!adsAllowed()) {
+            AdLog.d("appopen_preloader", "load skipped — ads disabled in Remote Config")
+            return
+        }
+        // RC is the source of truth once loaded (null => app-open disabled);
+        // fall back to the SmartAdConfig unit only before RC has arrived.
+        val unitId = if (AdsConfigRepository.isLoaded)
+            AdsConfigRepository.appOpenUnitId()
+        else
+            config.appOpenUnitId.ifBlank { null }
+        if (unitId.isNullOrBlank()) {
+            AdLog.d("appopen_preloader", "no app-open unit configured — skipping")
+            return
+        }
         AppOpenAd.load(
             application,
-            config.appOpenUnitId,
+            unitId,
             AdRequest.Builder().build(),
             object : AppOpenAd.AppOpenAdLoadCallback() {
                 override fun onAdLoaded(ad: AppOpenAd) {

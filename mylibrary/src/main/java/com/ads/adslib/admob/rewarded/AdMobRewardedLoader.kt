@@ -3,6 +3,7 @@ package com.ads.adslib.admob.rewarded
 import android.app.Activity
 import android.content.Context
 import com.ads.adslib.core.base.NetworkAdLoader
+import com.ads.adslib.core.callback.FullScreenCallbacks
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
@@ -15,12 +16,7 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 
 class AdMobRewardedLoader(
     unit: NetworkAdUnit,
-    private val onShownCb: (AdNetwork) -> Unit,
-    private val onDismissedCb: (AdNetwork) -> Unit,
-    private val onClickedCb: (AdNetwork) -> Unit,
-    private val onImpressionCb: (AdNetwork) -> Unit,
-    private val onFailedToShowCb: (AdError) -> Unit,
-    private val onRewardEarnedCb: (type: String, amount: Int) -> Unit
+    private val cb: FullScreenCallbacks
 ) : NetworkAdLoader(unit) {
 
     private var ad: RewardedAd? = null
@@ -52,34 +48,34 @@ class AdMobRewardedLoader(
         ad?.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
                 state = AdLoadState.SHOWING
-                onShownCb(AdNetwork.ADMOB)
+                cb.onShown(AdNetwork.ADMOB)
             }
 
             override fun onAdDismissedFullScreenContent() {
                 state = AdLoadState.DISMISSED
                 ad = null
-                onDismissedCb(AdNetwork.ADMOB)
+                cb.onDismissed(AdNetwork.ADMOB)
             }
 
-            override fun onAdClicked() = onClickedCb(AdNetwork.ADMOB)
-            override fun onAdImpression() = onImpressionCb(AdNetwork.ADMOB)
+            override fun onAdClicked() = cb.onClicked(AdNetwork.ADMOB)
+            override fun onAdImpression() = cb.onImpression(AdNetwork.ADMOB)
 
             override fun onAdFailedToShowFullScreenContent(error: com.google.android.gms.ads.AdError) {
                 state = AdLoadState.FAILED
                 ad = null
-                onFailedToShowCb(AdError(AdNetwork.ADMOB, error.code, error.message))
+                cb.onFailedToShow(AdError(AdNetwork.ADMOB, error.code, error.message))
             }
         }
     }
 
     override fun show(activity: Activity) {
         val rewardedAd = ad ?: run {
-            onFailedToShowCb(AdError(AdNetwork.ADMOB, -3, "Rewarded ad not ready at show()"))
+            cb.onFailedToShow(AdError(AdNetwork.ADMOB, -3, "Rewarded ad not ready at show()"))
             return
         }
         // RewardItem: type = currency name (e.g. "coins"), amount = reward count
         rewardedAd.show(activity) { rewardItem ->
-            onRewardEarnedCb(rewardItem.type, rewardItem.amount)
+            cb.onRewardEarned(rewardItem.type, rewardItem.amount)
         }
     }
 
