@@ -6,7 +6,6 @@ import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.ads.adslib.admob.banner.BannerAdManager
-import com.ads.adslib.admob.native_ad.NativeAdManager
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
@@ -15,31 +14,29 @@ import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.BannerAdSize
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.smart.SmartAdManager
 
 class MainActivity : AppCompatActivity() {
 
-    // ---- AdMob Official Test IDs ----
     private val BANNER_TEST_ID = "ca-app-pub-3940256099942544/6300978111"
-    private val NATIVE_TEST_ID = "ca-app-pub-3940256099942544/2247696110"
 
-    // Interstitial + Rewarded are managed by AdsPreloader (always preloaded)
+    // Banner still uses direct manager (inline view — not a preloader concern)
     private lateinit var bannerManager: BannerAdManager
-    private lateinit var nativeAdManager: NativeAdManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_activity)
 
-        // AdsPreloader handles load/reload automatically
+        // SmartAdManager handles load/reload automatically
         findViewById<Button>(R.id.showInterstitial).setOnClickListener {
-            val shown = AdsPreloader.tryShowInterstitial(this)
+            val shown = SmartAdManager.tryShowInterstitial(this)
             if (!shown) toast("⏳ Interstitial not ready or interval active")
         }
 
         findViewById<Button>(R.id.showRewarded).setOnClickListener {
-            AdsPreloader.showRewarded(
-                activity = this,
-                callback = object : RewardCallback {
+            SmartAdManager.showRewarded(
+                activity  = this,
+                callback  = object : RewardCallback {
                     override fun onRewardEarned(type: String, amount: Int) =
                         toast("🏆 Reward: $amount $type")
                     override fun onDismissed(network: AdNetwork) =
@@ -51,21 +48,43 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // Consent + SDK init → AdsPreloader.preload() → loadBanner + loadNative
+        // Consent → SDK init → SmartAdManager.init() → Banner + Native load
         AdsInitializer.init(
             activity  = this,
             onReady   = {
                 toast("✅ AdsSdk ready!")
-                // Preloader already started in AdsInitializer.init()
                 loadBanner()
-                loadNative()
+                // Native ads preloaded by SmartAdManager — attach when needed
+                SmartAdManager.attachNative(
+                    container = findViewById(R.id.native_ad),
+                    onEmpty   = { /* optional: show placeholder */ }
+                )
             },
             onBlocked = { toast("⚠️ Consent na madyo — ads load nahi thay") }
         )
     }
 
+    // Rewarded: prepare on this screen, release when leaving
+    override fun onResume() {
+        super.onResume()
+        if (::bannerManager.isInitialized) bannerManager.resume()
+        SmartAdManager.prepareRewarded(this)
+    }
+
+    override fun onPause() {
+        if (::bannerManager.isInitialized) bannerManager.pause()
+        SmartAdManager.releaseRewarded()
+        super.onPause()
+    }
+
+    override fun onDestroy() {
+        if (::bannerManager.isInitialized) bannerManager.destroy()
+        super.onDestroy()
+        // SmartAdManager survives rotation — do NOT call destroy() here
+    }
+
     // ---------------------------------------------------------------
-    // Banner — waterfall: AdMob → Meta → Unity
+    // Banner — direct manager (inline view, not a fullscreen preloader)
     // ---------------------------------------------------------------
     private fun loadBanner() {
         val config = AdUnitConfig(
@@ -87,50 +106,6 @@ class MainActivity : AppCompatActivity() {
             override fun onFailedToLoad(error: AdError) =
                 toast("❌ Banner fail: ${error.message}")
         })
-    }
-
-    // ---------------------------------------------------------------
-    // Native — waterfall: AdMob → Meta
-    // ---------------------------------------------------------------
-    private fun loadNative() {
-        val config = AdUnitConfig(
-            placementKey = "main_native",
-            format       = AdFormat.NATIVE,
-            waterfall    = listOf(
-                NetworkAdUnit(AdNetwork.ADMOB, NATIVE_TEST_ID),
-                // NetworkAdUnit(AdNetwork.META, "META_NATIVE_PLACEMENT"),
-            )
-        )
-        nativeAdManager = NativeAdManager(config)
-        nativeAdManager.load(this, object : AdCallback {
-            override fun onLoaded(network: AdNetwork) {
-                nativeAdManager.attach(findViewById<LinearLayout>(R.id.native_ad))
-                toast("🖼 Native loaded via $network")
-            }
-            override fun onFailedToLoad(error: AdError) =
-                toast("❌ Native fail: ${error.message}")
-        })
-    }
-
-    // ---------------------------------------------------------------
-    // Lifecycle
-    // ---------------------------------------------------------------
-    override fun onPause() {
-        if (::bannerManager.isInitialized) bannerManager.pause()
-        super.onPause()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        if (::bannerManager.isInitialized) bannerManager.resume()
-    }
-
-    override fun onDestroy() {
-        if (::bannerManager.isInitialized)   bannerManager.destroy()
-        if (::nativeAdManager.isInitialized) nativeAdManager.destroy()
-        super.onDestroy()
-        // Note: AdsPreloader.destroy() only in Application.onTerminate()
-        // — preloader should survive Activity recreations (rotation, etc.)
     }
 
     private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
