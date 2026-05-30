@@ -35,17 +35,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
-    implementation("pl.droidsonroids.gif:android-gif-drawable:1.0.6")
 
     implementation("com.unity3d.ads:unity-ads:4.7.0")
     implementation("com.google.android.gms:play-services-ads:23.3.0")
     implementation("com.facebook.android:audience-network-sdk:6.17.0")
-
-    implementation("com.squareup.retrofit2:retrofit:2.11.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
-
-    // Old consent library replaced by UMP SDK
-    // implementation("com.google.android.ads.consent:consent-library:1.0.8")
 
     // App-level foreground/background detection for App Open ads
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
