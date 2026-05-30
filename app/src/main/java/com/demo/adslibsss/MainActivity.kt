@@ -7,35 +7,30 @@ import androidx.appcompat.app.AppCompatActivity
 import com.ads.adslib.AdsLib
 import com.ads.adslib.admob.banner.BannerAdManager
 import com.ads.adslib.admob.native_ad.NativeAdManager
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
-import com.ads.adslib.core.model.AdFormat
 import com.ads.adslib.core.model.AdNetwork
-import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.BannerAdSize
-import com.ads.adslib.core.model.NetworkAdUnit
 import com.ads.adslib.smart.SmartAdManager
 import com.demo.adslibsss.databinding.MainActivityBinding
 
+/**
+ * Demo — every ad is now driven by the Remote Config JSON via
+ * [AdsConfigRepository]. No hardcoded ad unit IDs here; the screen name
+ * (e.g. "home", "search", "detail") selects the placement + waterfall.
+ */
 class MainActivity : AppCompatActivity() {
 
-    // ── View Binding ──────────────────────────────────────────────────
     private lateinit var binding: MainActivityBinding
 
-    // ── AdMob official test IDs ───────────────────────────────────────
-    private val BANNER_INLINE_ID = "ca-app-pub-3940256099942544/6300978111"
-    private val BANNER_BOTTOM_ID = "ca-app-pub-3940256099942544/6300978111"
-    private val NATIVE_TEST_ID   = "ca-app-pub-3940256099942544/2247696110"
-
-    // ── Managers for view-based formats ──────────────────────────────
     private lateinit var inlineBannerManager: BannerAdManager
     private lateinit var bottomBannerManager: BannerAdManager
-    private lateinit var nativeAdManager: NativeAdManager
+    private var nativeAdManager: NativeAdManager? = null
 
     private var adsReady = false
 
-    // ── Lifecycle ─────────────────────────────────────────────────────
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = MainActivityBinding.inflate(layoutInflater)
@@ -49,7 +44,6 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         if (::inlineBannerManager.isInitialized) inlineBannerManager.resume()
         if (::bottomBannerManager.isInitialized) bottomBannerManager.resume()
-        // FIX: guard — SmartAdManager might not be ready on first launch
         if (adsReady) SmartAdManager.prepareRewarded(this)
     }
 
@@ -63,30 +57,40 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         if (::inlineBannerManager.isInitialized) inlineBannerManager.destroy()
         if (::bottomBannerManager.isInitialized) bottomBannerManager.destroy()
-        if (::nativeAdManager.isInitialized)     nativeAdManager.destroy()
+        nativeAdManager?.destroy()
         super.onDestroy()
         // SmartAdManager survives rotation — do NOT destroy() here
     }
 
-    // ── Button setup ──────────────────────────────────────────────────
+    // ── Buttons ───────────────────────────────────────────────────────
     private fun setupButtons() {
+        // Interstitial for the "search" screen — frequency cap applied by RC.
         binding.showInterstitial.setOnClickListener {
             if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
-            if (!SmartAdManager.tryShowInterstitial(this))
-                toast("⏳ Not ready / wait 30s between shows")
+            when {
+                AdsConfigRepository.interstitialConfig("search") == null ->
+                    toast("ℹ️ Interstitial disabled in config")
+                !AdsConfigRepository.shouldShowInterstitial("search") ->
+                    toast("⏳ Frequency cap — skipped this time")
+                else ->
+                    if (!SmartAdManager.tryShowInterstitial(this))
+                        toast("⏳ Interstitial not ready yet")
+            }
         }
 
+        // Rewarded for the "search" screen.
         binding.showRewarded.setOnClickListener {
             if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
+            if (AdsConfigRepository.rewardedConfig("search") == null) {
+                toast("ℹ️ Rewarded disabled in config"); return@setOnClickListener
+            }
             SmartAdManager.showRewarded(
-                activity  = this,
-                callback  = object : RewardCallback {
+                activity = this,
+                callback = object : RewardCallback {
                     override fun onRewardEarned(type: String, amount: Int) =
                         toast("🏆 Reward: $amount $type")
-                    override fun onShown(network: AdNetwork) =
-                        setStatus("Rewarded showing via $network")
                     override fun onDismissed(network: AdNetwork) =
-                        setStatus("✅ Rewarded done — reloading next ad...")
+                        setStatus("✅ Rewarded done via $network")
                     override fun onFailedToShow(error: AdError) =
                         toast("❌ Show fail: ${error.message}")
                 },
@@ -94,13 +98,14 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
+        // Native for the "detail" screen (RC waterfall: admob → meta).
         binding.showNative.setOnClickListener {
             if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
-            loadAndShowNative()
+            loadNativeFromConfig("detail")
         }
     }
 
-    // ── Ads initialization ────────────────────────────────────────────
+    // ── Init ──────────────────────────────────────────────────────────
     private fun initAds() {
         setStatus("Initializing ads...")
         AdsLib.initWithActivity(
@@ -115,42 +120,51 @@ class MainActivity : AppCompatActivity() {
 
     private fun onAdsReady() {
         adsReady = true
-        setStatus("✅ Ads ready — tap a button to test!")
 
-        // FIX: prepareRewarded AFTER SmartAdManager.init() completes
+        // Defensive: if the RC fetch callback didn't populate the repository
+        // (e.g. Firebase absent), load the bundled default JSON so the demo
+        // still has per-screen config.
+        if (!AdsConfigRepository.isLoaded) {
+            AdsConfigRepository.load(this, defaultAdsConfigJson())
+        }
+
+        if (!AdsConfigRepository.adsEnabled) {
+            setStatus("ℹ️ Ads disabled in Remote Config")
+            return
+        }
+
+        setStatus("✅ Ads ready (RC-driven) — tap a button!")
         SmartAdManager.prepareRewarded(this)
 
-        loadInlineBanner()
-        loadBottomBanner()
+        loadBannerFromConfig("home")     // inline banner — "home" screen
+        loadBottomBannerFromConfig("search")  // bottom banner — "search" screen
     }
 
-    // ── Inline banner (inside scroll area) ───────────────────────────
-    private fun loadInlineBanner() {
-        val config = AdUnitConfig(
-            placementKey = "inline_banner",
-            format       = AdFormat.BANNER,
-            bannerSize   = BannerAdSize.BANNER,
-            waterfall    = listOf(NetworkAdUnit(AdNetwork.ADMOB, BANNER_INLINE_ID))
-        )
+    // ── Banner (inline) — RC-driven ───────────────────────────────────
+    private fun loadBannerFromConfig(screen: String) {
+        val config = AdsConfigRepository.bannerConfig(screen, BannerAdSize.BANNER)
+        if (config == null) {
+            setStatus("ℹ️ Banner '$screen' disabled in config")
+            return
+        }
         inlineBannerManager = BannerAdManager(config)
         inlineBannerManager.load(this, object : AdCallback {
             override fun onLoaded(network: AdNetwork) {
                 inlineBannerManager.attach(binding.bannerContainer)
-                setStatus("✅ Banner loaded via $network")
+                setStatus("✅ Banner '$screen' via $network")
             }
             override fun onFailedToLoad(error: AdError) =
                 setStatus("❌ Banner fail: ${error.message}")
         })
     }
 
-    // ── Bottom adaptive banner ────────────────────────────────────────
-    private fun loadBottomBanner() {
-        val config = AdUnitConfig(
-            placementKey = "bottom_banner",
-            format       = AdFormat.BANNER,
-            bannerSize   = BannerAdSize.ADAPTIVE,
-            waterfall    = listOf(NetworkAdUnit(AdNetwork.ADMOB, BANNER_BOTTOM_ID))
-        )
+    // ── Banner (bottom) — RC-driven ───────────────────────────────────
+    private fun loadBottomBannerFromConfig(screen: String) {
+        val config = AdsConfigRepository.bannerConfig(screen, BannerAdSize.ADAPTIVE)
+        if (config == null) {
+            binding.bannerBottom.visibility = View.GONE
+            return
+        }
         bottomBannerManager = BannerAdManager(config)
         bottomBannerManager.load(this, object : AdCallback {
             override fun onLoaded(network: AdNetwork) {
@@ -163,38 +177,39 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    // ── Native ad ────────────────────────────────────────────────────
-    private fun loadAndShowNative() {
-        // Try cache first (SmartAdManager pre-loaded)
+    // ── Native — RC-driven ────────────────────────────────────────────
+    private fun loadNativeFromConfig(screen: String) {
+        // Prefer the SmartAdManager prefetch cache first.
         if (SmartAdManager.nativeReadyCount > 0) {
             SmartAdManager.attachNative(binding.nativeAd)
-            setStatus("✅ Native ad from cache")
+            setStatus("✅ Native from cache")
             return
         }
-
-        // Cache empty — direct load
-        setStatus("⏳ Loading native ad...")
-        val config = AdUnitConfig(
-            placementKey = "test_native",
-            format       = AdFormat.NATIVE,
-            waterfall    = listOf(NetworkAdUnit(AdNetwork.ADMOB, NATIVE_TEST_ID))
-        )
-        nativeAdManager = NativeAdManager(config)
-        nativeAdManager.load(this, object : AdCallback {
-            override fun onLoaded(network: AdNetwork) {
-                nativeAdManager.attach(binding.nativeAd)
-                setStatus("✅ Native ad loaded via $network")
-            }
-            override fun onFailedToLoad(error: AdError) =
-                setStatus("❌ Native fail: ${error.message}")
-        })
+        val config = AdsConfigRepository.nativeConfig(screen)
+        if (config == null) {
+            setStatus("ℹ️ Native '$screen' disabled in config")
+            return
+        }
+        setStatus("⏳ Loading native '$screen'...")
+        nativeAdManager?.destroy()
+        nativeAdManager = NativeAdManager(config).also { mgr ->
+            mgr.load(this, object : AdCallback {
+                override fun onLoaded(network: AdNetwork) {
+                    mgr.attach(binding.nativeAd)
+                    setStatus("✅ Native '$screen' via $network")
+                }
+                override fun onFailedToLoad(error: AdError) =
+                    setStatus("❌ Native fail: ${error.message}")
+            })
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────
-    private fun setStatus(msg: String) {
-        binding.tvStatus.text = msg
-    }
+    private fun setStatus(msg: String) { binding.tvStatus.text = msg }
 
-    private fun toast(msg: String) =
-        Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+    /** Shared default ads_config — used only as an offline fallback. */
+    private fun defaultAdsConfigJson(): String =
+        AdsConfigDefaults.ADS_CONFIG
 }
