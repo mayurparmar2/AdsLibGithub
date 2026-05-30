@@ -5,6 +5,7 @@ import android.widget.Button
 import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.ads.adslib.AdsLib
 import com.ads.adslib.admob.banner.BannerAdManager
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
@@ -20,17 +21,17 @@ class MainActivity : AppCompatActivity() {
 
     private val BANNER_TEST_ID = "ca-app-pub-3940256099942544/6300978111"
 
-    // Banner still uses direct manager (inline view — not a preloader concern)
+    // Banner uses its own manager (inline view — not a preloader concern)
     private lateinit var bannerManager: BannerAdManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.main_activity)
 
-        // SmartAdManager handles load/reload automatically
+        // Buttons — SmartAdManager handles load/reload/retry automatically
         findViewById<Button>(R.id.showInterstitial).setOnClickListener {
-            val shown = SmartAdManager.tryShowInterstitial(this)
-            if (!shown) toast("⏳ Interstitial not ready or interval active")
+            if (!SmartAdManager.tryShowInterstitial(this))
+                toast("⏳ Interstitial not ready or interval active")
         }
 
         findViewById<Button>(R.id.showRewarded).setOnClickListener {
@@ -48,23 +49,23 @@ class MainActivity : AppCompatActivity() {
             )
         }
 
-        // Consent → SDK init → SmartAdManager.init() → Banner + Native load
-        AdsInitializer.init(
+        // Step 1: Consent → Step 2: SDK init (in library via AdsLib)
+        // Step 3: SmartAdManager.init() (called inside MyLibrary.onAdsReady)
+        AdsLib.initWithActivity(
             activity  = this,
             onReady   = {
-                toast("✅ AdsSdk ready!")
+                toast("✅ Ads ready!")
                 loadBanner()
-                // Native ads preloaded by SmartAdManager — attach when needed
                 SmartAdManager.attachNative(
                     container = findViewById(R.id.native_ad),
-                    onEmpty   = { /* optional: show placeholder */ }
+                    onEmpty   = { /* cache still loading — ignored */ }
                 )
             },
-            onBlocked = { toast("⚠️ Consent na madyo — ads load nahi thay") }
+            onBlocked = { toast("⚠️ Consent denied — ads disabled") }
         )
     }
 
-    // Rewarded: prepare on this screen, release when leaving
+    // Rewarded: prepare when this screen is active, release when leaving
     override fun onResume() {
         super.onResume()
         if (::bannerManager.isInitialized) bannerManager.resume()
@@ -83,9 +84,7 @@ class MainActivity : AppCompatActivity() {
         // SmartAdManager survives rotation — do NOT call destroy() here
     }
 
-    // ---------------------------------------------------------------
-    // Banner — direct manager (inline view, not a fullscreen preloader)
-    // ---------------------------------------------------------------
+    // ── Banner ───────────────────────────────────────────────────────
     private fun loadBanner() {
         val config = AdUnitConfig(
             placementKey = "main_banner",
@@ -93,15 +92,15 @@ class MainActivity : AppCompatActivity() {
             bannerSize   = BannerAdSize.ADAPTIVE,
             waterfall    = listOf(
                 NetworkAdUnit(AdNetwork.ADMOB, BANNER_TEST_ID),
-                // NetworkAdUnit(AdNetwork.META,  "META_BANNER_PLACEMENT"),
-                // NetworkAdUnit(AdNetwork.UNITY, "UNITY_BANNER_PLACEMENT"),
+                // NetworkAdUnit(AdNetwork.META,  "META_BANNER"),
+                // NetworkAdUnit(AdNetwork.UNITY, "UNITY_BANNER"),
             )
         )
         bannerManager = BannerAdManager(config)
         bannerManager.load(this, object : AdCallback {
             override fun onLoaded(network: AdNetwork) {
                 bannerManager.attach(findViewById<LinearLayout>(R.id.banner_container))
-                toast("📢 Banner loaded via $network")
+                toast("📢 Banner via $network")
             }
             override fun onFailedToLoad(error: AdError) =
                 toast("❌ Banner fail: ${error.message}")
