@@ -73,9 +73,10 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
                 "interval not passed — ${(intervalMs - elapsed) / 1000}s remaining")
             return false
         }
-        lastShownAt = System.currentTimeMillis()
 
-        // Promote ready → showing; readyManager freed for the next preload
+        // Promote ready → showing; readyManager freed for the next preload.
+        // lastShownAt is set in onShown (confirmed display), not here, so a
+        // failed show doesn't wrongly start the interval clock.
         showingManager = mgr
         readyManager = null
         mgr.show(activity)
@@ -138,6 +139,8 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
             override fun onShown(network: AdNetwork) {
                 // Block App Open from stacking on top of this ad.
                 FullScreenAdState.onShown()
+                // Start the interval clock only now that the ad actually displayed.
+                lastShownAt = System.currentTimeMillis()
                 // ✅ Ad is now visible — preload the NEXT ad immediately
                 // so it's ready before the user dismisses this one.
                 AdLog.d("interstitial_preloader", "shown via $network — preloading next")

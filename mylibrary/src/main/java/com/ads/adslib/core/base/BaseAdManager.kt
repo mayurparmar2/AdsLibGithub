@@ -51,7 +51,8 @@ abstract class BaseAdManager(
         }
         if (state == AdLoadState.LOADED) {
             AdLog.d(config.placementKey, "already loaded, skipping")
-            callback?.let { main.post { it.onLoaded(loadedLoader!!.network) } }
+            val net = loadedLoader?.network
+            if (net != null) callback?.let { main.post { it.onLoaded(net) } }
             return
         }
 
