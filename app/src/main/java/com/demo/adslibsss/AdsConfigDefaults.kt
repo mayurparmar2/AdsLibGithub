@@ -30,7 +30,7 @@ object AdsConfigDefaults {
             },
             "interstitial": {
               "enabled": true,
-              "frequency": 3,
+              "frequency": 1,
               "search": { "ad_unit_id": "ca-app-pub-3940256099942544/1033173712" },
               "detail": { "ad_unit_id": "ca-app-pub-3940256099942544/1033173712" }
             },

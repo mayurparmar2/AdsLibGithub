@@ -6,7 +6,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.ads.adslib.AdsLib
 import com.ads.adslib.admob.banner.BannerAdManager
+import com.ads.adslib.admob.interstitial.InterstitialAdManager
 import com.ads.adslib.admob.native_ad.NativeAdManager
+import com.ads.adslib.admob.rewarded.RewardedAdManager
 import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
@@ -29,6 +31,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var bottomBannerManager: BannerAdManager
     private var nativeAdManager: NativeAdManager? = null
 
+    // RC-driven per-screen full-screen managers (work whether or not the
+    // app-wide SmartAdManager preloading is enabled).
+    private var interstitialManager: InterstitialAdManager? = null
+    private var rewardedManager: RewardedAdManager? = null
+
     private var adsReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,13 +45,6 @@ class MainActivity : AppCompatActivity() {
 
         setupButtons()
         initAds()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        // Prepare rewarded on onStart/onStop (not onResume/onPause) so transient
-        // pauses (dialogs, permission prompts) don't tear down & reload the ad.
-        if (adsReady) SmartAdManager.prepareRewarded(this)
     }
 
     override fun onResume() {
@@ -59,15 +59,12 @@ class MainActivity : AppCompatActivity() {
         super.onPause()
     }
 
-    override fun onStop() {
-        if (adsReady) SmartAdManager.releaseRewarded()
-        super.onStop()
-    }
-
     override fun onDestroy() {
         if (::inlineBannerManager.isInitialized) inlineBannerManager.destroy()
         if (::bottomBannerManager.isInitialized) bottomBannerManager.destroy()
         nativeAdManager?.destroy()
+        interstitialManager?.destroy()
+        rewardedManager?.destroy()
         super.onDestroy()
         // SmartAdManager survives rotation — do NOT destroy() here
     }
@@ -77,39 +74,35 @@ class MainActivity : AppCompatActivity() {
         // Interstitial for the "search" screen — frequency cap applied by RC.
         binding.showInterstitial.setOnClickListener {
             if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
+            val mgr = interstitialManager
             when {
                 AdsConfigRepository.interstitialConfig("search") == null ->
                     toast("ℹ️ Interstitial disabled in config")
                 // Check readiness BEFORE consuming the frequency counter, so a
                 // not-ready tap never burns a frequency slot.
-                !SmartAdManager.isInterstitialReady ->
-                    toast("⏳ Interstitial not ready yet")
+                mgr == null || !mgr.isReady() -> {
+                    toast("⏳ Interstitial not ready yet — loading")
+                    loadInterstitial()
+                }
                 !AdsConfigRepository.shouldShowInterstitial("search") ->
                     toast("⏳ Frequency cap — skipped this time")
-                else ->
-                    if (!SmartAdManager.tryShowInterstitial(this))
-                        toast("⏳ Interstitial not ready yet")
+                else -> mgr.show(this)
             }
         }
 
         // Rewarded for the "search" screen.
         binding.showRewarded.setOnClickListener {
             if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
-            if (AdsConfigRepository.rewardedConfig("search") == null) {
-                toast("ℹ️ Rewarded disabled in config"); return@setOnClickListener
+            val mgr = rewardedManager
+            when {
+                AdsConfigRepository.rewardedConfig("search") == null ->
+                    toast("ℹ️ Rewarded disabled in config")
+                mgr == null || !mgr.isReady() -> {
+                    toast("⏳ Rewarded loading...")
+                    loadRewarded()
+                }
+                else -> mgr.show(this)
             }
-            SmartAdManager.showRewarded(
-                activity = this,
-                callback = object : RewardCallback {
-                    override fun onRewardEarned(type: String, amount: Int) =
-                        toast("🏆 Reward: $amount $type")
-                    override fun onDismissed(network: AdNetwork) =
-                        setStatus("✅ Rewarded done via $network")
-                    override fun onFailedToShow(error: AdError) =
-                        toast("❌ Show fail: ${error.message}")
-                },
-                onNotReady = { toast("⏳ Rewarded loading...") }
-            )
         }
 
         // Native for the "detail" screen (RC waterfall: admob → meta).
@@ -152,10 +145,49 @@ class MainActivity : AppCompatActivity() {
         }
 
         setStatus("✅ Ads ready (RC-driven) — tap a button!")
-        SmartAdManager.prepareRewarded(this)
+
+        // Preload full-screen ads so the buttons show instantly.
+        loadInterstitial()
+        loadRewarded()
 
         loadBannerFromConfig("home")     // inline banner — "home" screen
         loadBottomBannerFromConfig("search")  // bottom banner — "search" screen
+    }
+
+    // ── Interstitial — RC-driven per-screen ───────────────────────────
+    private fun loadInterstitial() {
+        val config = AdsConfigRepository.interstitialConfig("search") ?: return
+        interstitialManager?.destroy()
+        interstitialManager = InterstitialAdManager(config).also { mgr ->
+            mgr.load(this, object : AdCallback {
+                override fun onLoaded(network: AdNetwork) =
+                    setStatus("✅ Interstitial ready via $network")
+                override fun onDismissed(network: AdNetwork) {
+                    setStatus("✅ Interstitial done via $network")
+                    loadInterstitial()   // preload the next one
+                }
+                override fun onFailedToLoad(error: AdError) =
+                    setStatus("❌ Interstitial fail: ${error.message}")
+            })
+        }
+    }
+
+    // ── Rewarded — RC-driven per-screen ───────────────────────────────
+    private fun loadRewarded() {
+        val config = AdsConfigRepository.rewardedConfig("search") ?: return
+        rewardedManager?.destroy()
+        rewardedManager = RewardedAdManager(config).also { mgr ->
+            mgr.load(this, object : RewardCallback {
+                override fun onRewardEarned(type: String, amount: Int) =
+                    toast("🏆 Reward: $amount $type")
+                override fun onDismissed(network: AdNetwork) {
+                    setStatus("✅ Rewarded done via $network")
+                    loadRewarded()       // preload the next one
+                }
+                override fun onFailedToShow(error: AdError) =
+                    toast("❌ Show fail: ${error.message}")
+            })
+        }
     }
 
     // ── Banner (inline) — RC-driven ───────────────────────────────────
