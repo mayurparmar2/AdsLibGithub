@@ -1,35 +1,63 @@
 # AdsLib — Complete Data Flow Documentation
 
+> Reflects the current architecture: three networks (AdMob / Meta / Unity), all
+> formats (Banner, Interstitial, Native, Rewarded, App Open), the **opt-in
+> SmartAdManager** preloading layer, and the **Remote-Config-driven**
+> `AdsConfigRepository`.
+
 ## 1. Architecture Layers (Top → Bottom)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  APP LAYER  (com.demo.adslibsss)                                │
-│  MainActivity.kt — App entry point                              │
-│  ConsentManager → AdsSdk.initialize() → load() → show()        │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ calls
+│  APP LAYER  (com.demo.adslibsss)                                  │
+│  App : MyLibrary()          — Application; bootstraps Remote Config│
+│  MainActivity               — AdsLib.initWithActivity(...) then    │
+│                               per-screen load()/show()/attach()    │
+└───────────────┬───────────────────────────────┬──────────────────┘
+                │ entry points                   │
+┌───────────────▼───────────────┐   ┌────────────▼─────────────────┐
+│  ENTRY / INIT                  │   │  SMART PRELOADING (opt-in)    │
+│  AdsLib.initWithActivity       │   │  SmartAdManager               │
+│  → ConsentManager (UMP)        │   │  ├ InterstitialPreloader      │
+│  → AdsSdk.initialize           │   │  ├ RewardedAdPreloader        │
+│    (AdMob + Meta + Unity)      │   │  ├ AppOpenAdPreloader         │
+│  MyLibrary (Application base)  │   │  └ NativeAdCache              │
+└───────────────┬────────────────┘   └────────────┬─────────────────┘
+                │                                  │ units from RC
+┌───────────────▼──────────────────────────────────▼──────────────┐
+│  CONFIG LAYER  (config/remote)                                    │
+│  RemoteConfigManager → RemoteConfigParser → AdsRemoteConfig       │
+│  AdsConfigRepository — per-screen AdUnitConfig builders           │
+│  FrequencyCapManager — count-based interstitial cap               │
+└────────────────────────────┬──────────────────────────────────────┘
+                             │ produces AdUnitConfig
 ┌────────────────────────────▼────────────────────────────────────┐
-│  MANAGER LAYER  (per-format, one per placement)                 │
-│  InterstitialAdManager / RewardedAdManager                      │
-│  BannerAdManager / NativeAdManager                              │
-│  All extend BaseAdManager — waterfall logic lives here ONLY     │
+│  MANAGER LAYER  (per-format, one per placement)                  │
+│  InterstitialAdManager / RewardedAdManager                       │
+│  BannerAdManager / NativeAdManager                               │
+│  All extend BaseAdManager — waterfall + state logic lives here   │
 └────────────────────────────┬────────────────────────────────────┘
                              │ creates & drives
 ┌────────────────────────────▼────────────────────────────────────┐
-│  LOADER LAYER  (per-network × per-format)                       │
-│  AdMobInterstitialLoader / MetaInterstitialLoader / Unity...    │
-│  AdMobBannerLoader / MetaBannerLoader / UnityBannerLoader       │
-│  AdMobRewardedLoader / MetaRewardedLoader / UnityRewardedLoader │
-│  AdMobNativeLoader / MetaNativeLoader                           │
-│  All extend NetworkAdLoader — touches ONE SDK only              │
+│  LOADER LAYER  (per-network × per-format)                        │
+│  AdMob*  Loader / Meta*  Loader / Unity*  Loader                 │
+│  All extend NetworkAdLoader — touches ONE SDK only               │
 └────────────────────────────┬────────────────────────────────────┘
                              │ calls
 ┌────────────────────────────▼────────────────────────────────────┐
-│  SDK LAYER  (third-party)                                        │
-│  Google AdMob  │  Meta Audience Network  │  Unity Ads           │
+│  SDK LAYER  (third-party)                                         │
+│  Google AdMob  │  Meta Audience Network  │  Unity Ads            │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+There are **two parallel ways** to serve ads, both fed by Remote Config:
+
+- **Per-screen managers** (used directly by the app, e.g. in `MainActivity`):
+  `BannerAdManager` / `NativeAdManager` / `InterstitialAdManager` /
+  `RewardedAdManager`, configured by `AdsConfigRepository.<format>Config(screen)`.
+- **SmartAdManager** (optional, app-wide background preloading): keeps full-screen
+  ads warm and shows App Open on foreground. Enabled only if the app overrides
+  `MyLibrary.provideAdsConfig()`.
 
 ---
 
@@ -48,276 +76,254 @@ BANNER        →  Inline view (320×50 to adaptive)
 INTERSTITIAL  →  Full-screen, user can dismiss
 REWARDED      →  Full-screen video, reward on completion
 NATIVE        →  Custom layout, app assembles the view
-APP_OPEN      →  (defined, not yet wired)
-SPLASH        →  (defined, not yet wired)
+APP_OPEN      →  Shown on app foreground (via SmartAdManager / AppOpenAdPreloader)
+SPLASH        →  (defined, not wired)
 ```
 
 ### `AdLoadState` — Lifecycle state machine
 ```
 IDLE ──load()──► LOADING ──success──► LOADED ──show()──► SHOWING
-  ▲                  │                               │
-  │              onFailed                     onDismissed
-  │                  │                               │
-  │             (next rung)                      DISMISSED
-  │              or FAILED                          │
-  └──────────────destroy()──────────────────────────┘
+  ▲                  │                                       │
+  │              onFailed                            onDismissed /
+  │                  │                               onFailedToShow
+  │             (next rung)                                  │
+  │              or FAILED          onFullScreenClosed() ────┘
+  └───────────── destroy() / onFullScreenClosed() ───────────┘
 ```
+`BaseAdManager.onFullScreenClosed()` returns the manager to `IDLE` after a
+full-screen ad is dismissed or fails to show, so it can be reloaded.
 
-### `AdUnitConfig` — Placement configuration (app provides this)
+### `AdUnitConfig` — Placement configuration (built by AdsConfigRepository or the app)
 ```kotlin
 AdUnitConfig(
     placementKey = "home_banner",       // unique placement name (for logging)
     format       = AdFormat.BANNER,     // which ad type
     bannerSize   = BannerAdSize.ADAPTIVE,  // only for BANNER
-    waterfall    = listOf(              // ordered fallback list
+    waterfall    = listOf(              // ordered fallback list (provider priority)
         NetworkAdUnit(AdNetwork.ADMOB,  "admob_unit_id",  enabled = true),
         NetworkAdUnit(AdNetwork.META,   "meta_placement", enabled = true),
         NetworkAdUnit(AdNetwork.UNITY,  "unity_placement",enabled = true),
     )
 )
+// AdUnitConfig.activeUnits = waterfall.filter { it.enabled && it.adUnitId.isNotBlank() }
 ```
 
-### `NetworkAdUnit` — One rung in the waterfall
+### `SmartAdConfig` — SmartAdManager tuning (NO ad unit IDs)
+```kotlin
+SmartAdConfig(
+    interstitialScreen = "search",   // RC ads_config screen keys
+    rewardedScreen     = "search",
+    nativeScreen       = "detail",
+    interstitialIntervalSec = 30,    // min seconds between interstitial shows
+    nativeCacheSize    = 3,
+    nativeExpiryMinutes = 60,
+    maxRetries = 6, retryBaseDelayMs = 5000, retryMaxDelayMs = 300000,
+)
 ```
-network   → which SDK to use
-adUnitId  → the placement ID for that SDK
-enabled   → can be toggled via Remote Config
-```
+Unit IDs are resolved from Remote Config by these screen keys — never hardcoded.
 
-### `AdError` — Normalized error (no network-specific types leak out)
+### `NetworkAdUnit` / `AdError`
 ```
-network → which network failed
-code    → network's own error code
-message → human-readable description
+NetworkAdUnit:  network → which SDK · adUnitId → placement id · enabled → toggle
+AdError:        network · code (SDK's own) · message · cause?
 ```
 
 ---
 
-## 3. Full Data Flow — Step by Step
+## 3. Boot & Initialization Flow
 
-### Step 1 — Consent (GDPR / CCPA)
+### Step 1 — Application start (Remote Config bootstrap)
 
 ```
-Activity.onCreate()
+App : MyLibrary()  (Application.onCreate)
     │
     ▼
-ConsentManager(activity)
+MyLibrary.initRemoteConfig()
     │
     ▼
-consentInformation.requestConsentInfoUpdate()   ← Google UMP SDK
+AdsSdk.remoteConfig.init(defaults = provideRemoteConfigDefaults())   ← Firebase RC
+    │  (minFetchInterval 0 in debug, 3600s release)
+    ▼
+fetchAndActivate() → onReady
     │
-    ├── [EEA user / first run]
-    │       ▼
-    │   UserMessagingPlatform.loadAndShowConsentFormIfRequired()
-    │       ▼
-    │   User taps Accept / Decline
-    │       ▼
-    │   onComplete() fires
+    ▼
+json = remoteConfig.getString("ads_config")        ← structured per-screen JSON
+    │  (falls back to local default when blank / Firebase absent)
+    ▼
+AdsConfigRepository.load(context, json)
+    │  → RemoteConfigParser.parse(json) → AdsRemoteConfig
+    │  → notifies onConfigLoaded listener (re-kicks SmartAdManager if running)
+    ▼
+Per-screen config now available
+```
+
+### Step 2 — First Activity: consent → SDK init (`AdsLib.initWithActivity`)
+
+```
+MainActivity: AdsLib.initWithActivity(activity, onReady, onBlocked)
     │
-    └── [non-EEA / already consented]
+    ▼
+[already initialized?] → onReady() immediately
+    │
+    ▼
+ConsentManager(activity).gatherConsent(timeoutMs = 8000) { … }   ← Google UMP
+    │  requestConsentInfoUpdate → loadAndShowConsentFormIfRequired
+    │  (8s timeout safety net guarantees the callback fires exactly once)
+    │
+    ├── consent.canRequestAds == false → onBlocked()  → STOP (no ads)
+    │
+    └── consent.canRequestAds == true
             ▼
-        onComplete() fires immediately
-            │
+        AdsSdk.initialize(
+            context, debug, hasConsent = canRequestAds,
+            unityGameId = AdsConfigRepository.unityGameId()
+        ) { onComplete }
             ▼
-    consent.canRequestAds  ──true──►  Step 2
-                           ──false──► STOP (no ads loaded)
+        MyLibrary.onAdsReady()      ← starts SmartAdManager IF opted in
+        onReady()                   ← app loads its per-screen ads
 ```
 
-### Step 2 — SDK Initialization
+### Step 3 — SDK Initialization internals (`AdsSdk.initialize`)
 
 ```
-AdsSdk.initialize(context, debug, testDeviceIds) { onComplete }
+AdsSdk.initialize(context, debug, hasConsent, testDeviceIds, unityGameId, onComplete)
     │
-    ├── AdLog.enabled = debug            ← logging on/off
-    ├── [if already initialized] → onComplete() immediately
+    ├── synchronized: atomic check-then-set of initialized / initializing
+    │     [already initialized] → onComplete() now
+    │     [initializing]        → queue onComplete, return
     │
-    ├── [debug + testDeviceIds not empty]
-    │       MobileAds.setRequestConfiguration(testDeviceIds)
+    ├── Meta:  AdSettings.setDataProcessingOptions( hasConsent ? [] : ["LDU"] )
+    │          AudienceNetworkAds.initialize(context)          ← consent FIRST
+    │
+    ├── Unity: MetaData("gdpr.consent" = hasConsent).commit()  ← consent FIRST
+    │          UnityAds.initialize(gameId, testMode = debug)
     │
     ▼
-MobileAds.initialize(context)           ← AdMob init
-    .apply {
-        initialized = true
-        onComplete()                    ← fires on main thread
-    }
-    │
-    │  (Meta / Unity init hooks go here when those modules are added)
-    ▼
-App: loadInterstitial() + loadRewarded() + loadBanner() + loadNative()
+MobileAds.initialize(context) { listener }      ← AdMob (real completion listener)
+    │   initialized = true; initializing = false
+    │   drain queued callbacks → onComplete()    ← all on main thread
 ```
+> Consent is forwarded to Meta and Unity **before** their init — a Play-policy
+> requirement. SDK init never happens inside a loader.
 
-### Step 3 — Load: Waterfall Engine (`BaseAdManager.load()`)
+---
+
+## 4. Load: Waterfall Engine (`BaseAdManager`)
+
+### Step 4a — `load()`
 
 ```
 manager.load(context, callback)
     │
-    ├── [state == LOADING]  →  ignore (already loading)
-    ├── [state == LOADED]   →  callback.onLoaded() immediately
+    ├── [state == LOADING] → ignore
+    ├── [state == LOADED]  → callback.onLoaded(loadedLoader.network) and return
     │
     ▼
-config.activeUnits  =  waterfall.filter { enabled && adUnitId.isNotBlank() }
+activeUnits = config.activeUnits        // enabled & non-blank, waterfall order
+    │
+    ├── [empty] → fail() → callback.onFailedToLoad()   ← always fires now
     │
     ▼
 loaders = activeUnits.mapNotNull { createLoader(it) }
-    │
-    ├── [loaders empty]  →  fail() → callback.onFailedToLoad()
-    │
+    ├── [empty] → fail() → callback.onFailedToLoad()
     ▼
-state = LOADING
-attempt(context, index = 0)
+state = LOADING ; attempt(context, 0)
 ```
 
-### Step 4 — Waterfall Attempt (recursive)
+### Step 4b — `attempt()` (recursive waterfall)
 
 ```
 attempt(context, index)
-    │
-    ├── [index >= loaders.size]
-    │       ▼
-    │   fail(AdError("Waterfall exhausted"))
-    │   callback.onFailedToLoad()  ← STOP
-    │
+    ├── [index >= loaders.size] → fail("Waterfall exhausted") → onFailedToLoad()
     ▼
-loader = loaders[index]          ← e.g. AdMobInterstitialLoader
-AdLog: "trying ADMOB (1/3)"
-    │
+loader = loaders[index]
 loader.load(context,
-    onLoaded = {
-        main.post {
-            loadedLoader = loader
-            state = LOADED
-            callback.onLoaded(loader.network)   ← SUCCESS ✓
-        }
-    },
-    onFailed = { error ->
-        main.post {
-            AdLog: "fallback: ADMOB failed → error"
-            loader.destroy()
-            attempt(context, index + 1)         ← TRY NEXT ↓
-        }
-    }
+    onLoaded = { main.post { loadedLoader = loader; state = LOADED
+                             callback.onLoaded(loader.network) } }   ← WIN
+    onFailed = { main.post { loader.destroy(); attempt(index + 1) } }← NEXT RUNG
 )
 ```
 
-### Step 5 — Loader: Network SDK Call
-
-Each loader touches exactly one SDK. Example — `AdMobInterstitialLoader`:
+### Step 4c — Loader: single-SDK call (AdMob interstitial example)
 
 ```
-loader.load(context, onLoaded, onFailed)
-    │
-    ▼
 InterstitialAd.load(context, adUnitId, AdRequest, callback)
-    │
-    ├── SDK: onAdLoaded(ad)
-    │       ad = loaded
-    │       state = LOADED
-    │       attachFullScreenCallbacks()   ← wire shown/dismissed/clicked
-    │       onLoaded()                   → BaseAdManager records winner
-    │
-    └── SDK: onAdFailedToLoad(error)
-            state = FAILED
-            onFailed(AdError(ADMOB, code, msg)) → BaseAdManager tries next
-```
-
-### Step 6 — Show
-
-```
-manager.show(activity)
-    │
-    ├── [loadedLoader == null || !isReady()]
-    │       AdLog: "show() called with no ready ad"
-    │       return false
-    │
-    ▼
-state = SHOWING
-loadedLoader.show(activity)
-    │
-    ▼ (AdMob example)
-ad.show(activity)               ← triggers SDK overlay
-    │
-    ├── onAdShowedFullScreenContent → onShownCb → dispatch { onShown(net) }
-    ├── onAdClicked                 → onClickedCb
-    ├── onAdImpression              → onImpressionCb
-    ├── onAdDismissedFullScreenContent
-    │       state = DISMISSED
-    │       ad = null
-    │       onDismissedCb → dispatch { onDismissed(net) }
-    │           ↓
-    │       App: manager.destroy(); load() again   ← reload cycle
-    │
-    └── onAdFailedToShowFullScreenContent
-            state = FAILED
-            onFailedToShowCb → dispatch { onFailedToShow(err) }
+    ├── onAdLoaded(ad)        → state = LOADED; wire FullScreenCallbacks; onLoaded()
+    └── onAdFailedToLoad(err) → state = FAILED; onFailed(AdError(ADMOB, code, msg))
 ```
 
 ---
 
-## 4. Format-Specific Flows
-
-### 4A. Interstitial
+## 5. Show & Full-Screen Callbacks
 
 ```
-App: InterstitialAdManager(config).load(context, AdCallback)
-         ↓ waterfall
-     AdMobInterstitialLoader  OR  MetaInterstitialLoader  OR  UnityInterstitialLoader
-         ↓ on success
-     isReady() == true
-         ↓ user action (button click, level complete)
-     manager.show(activity)
-         ↓
-     Full-screen overlay shown
-         ↓ user dismisses
-     onDismissed() → app reloads
+manager.show(activity)
+    ├── [no ready ad] → return false
+    ▼
+state = SHOWING ; loadedLoader.show(activity)
+    ▼  (AdMob example) ad.show(activity)
+    ├── onAdShowedFullScreenContent      → cb.onShown   → dispatch { onShown(net) }
+    ├── onAdClicked                      → cb.onClicked → dispatch { onClicked(net) }
+    ├── onAdImpression                   → cb.onImpression
+    ├── onAdDismissedFullScreenContent   → cb.onDismissed
+    │        → onFullScreenClosed() (state→IDLE, loadedLoader=null)
+    │        → dispatch { onDismissed(net) }
+    └── onAdFailedToShowFullScreenContent→ cb.onFailedToShow
+             → onFullScreenClosed() → dispatch { onFailedToShow(err) }
 ```
 
-### 4B. Rewarded
+### `FullScreenCallbacks` holder (replaces the old per-lambda constructors)
 
+Every full-screen loader (AdMob/Meta/Unity interstitial & rewarded) takes one
+`FullScreenCallbacks`. The manager builds it once via
+`BaseAdManager.fullScreenCallbacks()`:
+
+```kotlin
+protected fun fullScreenCallbacks() = FullScreenCallbacks(
+    onShown        = { net -> dispatch { onShown(net) } },
+    onDismissed    = { net -> onFullScreenClosed(); dispatch { onDismissed(net) } },
+    onClicked      = { net -> dispatch { onClicked(net) } },
+    onImpression   = { net -> dispatch { onImpression(net) } },
+    onFailedToShow = { err -> onFullScreenClosed(); dispatch { onFailedToShow(err) } },
+    onRewardEarned = { type, amount ->
+        dispatch { (this as? RewardCallback)?.onRewardEarned(type, amount) }
+    },
+)
 ```
-App: RewardedAdManager(config).load(context, RewardCallback)
-         ↓ waterfall
-     AdMobRewardedLoader  OR  MetaRewardedLoader  OR  UnityRewardedLoader
-         ↓ on success
-     isReady() == true
-         ↓ user taps "Watch Ad" button
-     manager.show(activity)
-         ↓
-     Video plays
-         ├── [User watches to end]
-         │       onRewardEarned(type, amount)   ← GIVE REWARD HERE
-         │       onDismissed()
-         │
-         └── [User skips (Unity only)]
-                 onDismissed()   ← NO reward (SKIPPED state)
+So `InterstitialAdManager.createLoader()` is just:
+`AdNetwork.ADMOB -> AdMobInterstitialLoader(unit, fullScreenCallbacks())`.
+
+All public callbacks are delivered on the **main thread** via `dispatch {}` /
+`Handler(Looper.getMainLooper())`.
+
+---
+
+## 6. Format-Specific Flows
+
+### 6A. Interstitial / 6B. Rewarded (per-screen)
+```
+InterstitialAdManager(config).load(ctx, AdCallback)      // RewardedAdManager: RewardCallback
+    ↓ waterfall (AdMob → Meta → Unity)
+isReady() == true
+    ↓ user action
+manager.show(activity)
+    ↓ dismiss → onFullScreenClosed() → onDismissed() → app reloads
+Rewarded also: onRewardEarned(type, amount) when the video completes.
 ```
 
 **Reward values per network:**
 | Network | type | amount |
 |---------|------|--------|
-| AdMob   | From ad unit config (e.g. "coins") | From ad unit config (e.g. 10) |
-| Meta FAN | `"reward"` (fixed) | `1` (fixed — FAN no dynamic) |
-| Unity   | `"reward"` (fixed) | `1` only when COMPLETED |
+| AdMob   | from ad unit (e.g. "coins") | from ad unit (e.g. 10) |
+| Meta FAN | `"reward"` (fixed) | `1` (FAN has no dynamic reward) |
+| Unity   | `"reward"` (fixed) | `1`, only when COMPLETED (SKIPPED → none) |
 
-### 4C. Banner
-
+### 6C. Banner
 ```
-App: BannerAdManager(config).load(context, AdCallback)
-         ↓ waterfall
-     AdMobBannerLoader  OR  MetaBannerLoader  OR  UnityBannerLoader
-         ↓ on success (view is already built)
-     AdCallback.onLoaded(network)
-         ↓
-     manager.attach(container: ViewGroup)
-         ↓
-     container.removeAllViews()
-     container.addView(loadedLoader.getView())  ← AdView/FanAdView/BannerView
-
-Lifecycle (IMPORTANT — banner must be paused/resumed):
-     Activity.onPause()  → manager.pause()  → adView.pause()
-     Activity.onResume() → manager.resume() → adView.resume()
-     Activity.onDestroy()→ manager.destroy()→ adView.destroy()
+BannerAdManager(config).load(ctx, AdCallback)
+    ↓ onLoaded → manager.attach(container)  // removeAllViews + addView(getView())
+Lifecycle: onResume→resume(), onPause→pause(), onDestroy→destroy()
 ```
-
 **BannerAdSize mapping:**
 | `BannerAdSize` | AdMob | Meta FAN | Unity |
 |---|---|---|---|
@@ -326,277 +332,208 @@ Lifecycle (IMPORTANT — banner must be paused/resumed):
 | MEDIUM_RECTANGLE | 300×250 | RECTANGLE_HEIGHT_250 | 300×250 |
 | ADAPTIVE | device-width adaptive | BANNER_HEIGHT_50 | 320×50 |
 
-### 4D. Native
-
+### 6D. Native
 ```
-App: NativeAdManager(config).load(context, AdCallback)
-         ↓ waterfall
-     AdMobNativeLoader  OR  MetaNativeLoader  (Unity: not supported)
-         ↓ on success
-     Loader inflates template XML + populates all asset views
-         ↓
-     AdCallback.onLoaded(network)
-         ↓
-     manager.attach(container: ViewGroup)
-         ↓
-     container.removeAllViews()
-     container.addView(populatedNativeAdView)
-
-AdMob native view population:
-     NativeAdView.headlineView   ← ad.headline
-     NativeAdView.bodyView       ← ad.body
-     NativeAdView.iconView       ← ad.icon.drawable
-     NativeAdView.mediaView      ← ad.mediaContent
-     NativeAdView.callToActionView ← ad.callToAction
-     NativeAdView.starRatingView ← ad.starRating
-     NativeAdView.setNativeAd(ad)  ← MUST be last
-
-Meta native view population:
-     nativeAd.advertiserName     → native_ad_title
-     nativeAd.adBodyText         → native_ad_body
-     nativeAd.adSocialContext    → native_ad_social_context
-     nativeAd.adCallToAction     → native_ad_call_to_action
-     AdOptionsView               → ad_choices_container (policy required)
-     nativeAd.registerViewForInteraction(view, mediaView, iconView, clicks)
-
-Teardown (IMPORTANT — prevents memory leak):
-     AdMob: nativeAd.destroy()
-     Meta:  nativeAd.unregisterView() + nativeAd.destroy()
+NativeAdManager(config).load(ctx, AdCallback)     // AdMob or Meta (Unity: unsupported)
+    ↓ loader inflates template + populates assets (full-width layout params)
+    ↓ onLoaded → manager.attach(container)
+Teardown: AdMob nativeAd.destroy(); Meta unregisterView()+destroy()
 ```
 
 ---
 
-## 5. Callback Flow (Thread Safety)
+## 7. SmartAdManager — App-Wide Preloading (opt-in)
 
-All public callbacks fire on the **main thread**. The flow:
+Enabled only when the app overrides `MyLibrary.provideAdsConfig()` (returns
+non-null). `MyLibrary.onAdsReady()` then calls `SmartAdManager.init(app, config)`.
+All units come from `AdsConfigRepository` (by the screen keys in `SmartAdConfig`);
+if RC loads later, `setConfigLoadedListener` re-kicks the preloaders.
+
+```
+SmartAdManager.init(application, config)
+    ├── InterstitialPreloader.start()   double-buffer; preload next on onShown;
+    │                                    proactive ~55m expiry; interval guard
+    ├── AppOpenAdPreloader.start()       ProcessLifecycle foreground show;
+    │                                    4h freshness; FullScreenAdState guard
+    ├── RewardedAdPreloader              on-demand (prepare/show/release per screen)
+    ├── NativeAdCache.prefetch()         AdMob-only LRU cache, prune on expiry
+    └── ProcessLifecycleOwner observer   re-arms retry backoff on foreground
+        + AdsConfigRepository.setConfigLoadedListener { re-kick all }
+```
+
+Public API (all null-safe when SmartAdManager was never initialized):
+`tryShowInterstitial(activity)` · `isInterstitialReady` ·
+`prepareRewarded/showRewarded/releaseRewarded` · `isRewardedReady` ·
+`prefetchNative/attachNative/nativeReadyCount`.
+
+`FullScreenAdState` is a process-wide flag so App Open never stacks on top of an
+interstitial/rewarded ad (set on `onShown`, cleared on dismiss; 1s re-foreground
+guard).
+
+---
+
+## 8. Remote Config Integration
+
+```
+ads_config JSON (Firebase RC key)
+    │  RemoteConfigParser.parse()  (org.json, fully null-safe → EMPTY on error)
+    ▼
+AdsRemoteConfig { enabled, providerPriority, providers{ADMOB/META/UNITY → ProviderConfig} }
+    │
+    ▼  AdsConfigRepository builders (return null = disabled / not configured):
+    ├── bannerConfig(screen, size)
+    ├── nativeConfig(screen)           admobNativeUnitId(screen) for the cache
+    ├── interstitialConfig(screen)     + shouldShowInterstitial(screen) (freq cap)
+    ├── rewardedConfig(screen)
+    ├── appOpenConfig() / appOpenUnitId()
+    └── unityGameId()                  → AdsSdk.initialize
+```
+
+Example `ads_config` shape:
+```json
+{ "ads": {
+    "enabled": true,
+    "provider_priority": ["meta", "admob", "unity"],
+    "providers": {
+      "admob": { "enabled": true,
+        "interstitial": { "enabled": true, "frequency": 1,
+                          "search": { "ad_unit_id": "ca-app-pub-…/…" } },
+        "rewarded":     { "enabled": true, "search": { "ad_unit_id": "…" } },
+        "banner":       { "home": { "enabled": true, "ad_unit_id": "…" } },
+        "native":       { "detail": { "enabled": true, "ad_unit_id": "…" } },
+        "app_open":     { "enabled": true, "ad_unit_id": "…" } },
+      "meta":  { "enabled": true, "interstitial": { "enabled": true,
+                 "search": { "placement_id": "…" } } },
+      "unity": { "enabled": false, "game_id": "…",
+                 "rewarded": { "enabled": true, "search": { "placement_id": "Rewarded_Android" } } }
+} } }
+```
+
+- **Kill-switch:** `enabled:false` (global) or a format/screen disabled → the
+  matching builder returns null, so nothing loads. SmartAdManager also skips init
+  when `ads_enabled` is false.
+- **Provider priority** defines waterfall order; per-screen `enabled` + presence
+  of a placement decide which rungs are included.
+- **Frequency cap:** count-based per screen, persisted in SharedPreferences;
+  `frequency <= 1` means no cap.
+
+---
+
+## 9. Callback Threading
 
 ```
 SDK callback (any thread)
-    │
-    ▼
-NetworkAdLoader: onLoaded() / onFailed() lambdas called
-    │
-    ▼
-BaseAdManager: main.post { ... }        ← Handler(Looper.getMainLooper())
-    │
-    ▼
-BaseAdManager.dispatch { callback.onXxx() }
-    │
-    ▼
-App: AdCallback / RewardCallback methods  ← always on main thread ✓
-```
-
-**`dispatch {}` helper (BaseAdManager):**
-```kotlin
-protected fun dispatch(block: AdCallback.() -> Unit) {
-    callback?.let { cb -> main.post { cb.block() } }
-}
+   → NetworkAdLoader onLoaded/onFailed or FullScreenCallbacks member
+   → BaseAdManager main.post { … }            (Handler on main Looper)
+   → dispatch { callback.onXxx() }
+   → App AdCallback / RewardCallback           ← always main thread ✓
 ```
 
 ---
 
-## 6. Waterfall Fallback — Visual Example
-
-Config with 3 networks:
-```
-waterfall = [ADMOB, META, UNITY]
-```
-
-Scenario: AdMob fails, Meta fails, Unity succeeds:
-
-```
-attempt(0) → AdMobInterstitialLoader.load()
-                 ↓ SDK: onAdFailedToLoad (e.g. no fill)
-             loader.destroy()
-             attempt(1)
-                 ↓
-             MetaInterstitialLoader.load()
-                 ↓ SDK: onError (e.g. network error)
-             loader.destroy()
-             attempt(2)
-                 ↓
-             UnityInterstitialLoader.load()
-                 ↓ SDK: onUnityAdsAdLoaded ✓
-             loadedLoader = UnityInterstitialLoader
-             state = LOADED
-             callback.onLoaded(AdNetwork.UNITY)
-```
-
-If ALL fail:
-```
-attempt(3) → index >= loaders.size
-             fail(AdError(lastNetwork, -2, "Waterfall exhausted"))
-             callback.onFailedToLoad(error)
-```
-
----
-
-## 7. Package Structure & Responsibilities
+## 10. Package Structure & Responsibilities
 
 ```
 com.ads.adslib
-│
-├── AdsSdk.kt                          Entry point — init once, gate on consent
+├── AdsSdk.kt                    SDK init facade (AdMob + Meta + Unity, consent fwd)
+├── AdsLib.kt                    Activity entry: consent → init → preloaders
+├── MyLibrary.kt                 Application base; RC bootstrap; provideAdsConfig()?
 │
 ├── core/
-│   ├── model/
-│   │   ├── AdEnums.kt                 AdNetwork, AdFormat, AdLoadState, BannerAdSize
-│   │   └── AdModels.kt                AdError, NetworkAdUnit, AdUnitConfig
-│   ├── callback/
-│   │   └── AdCallback.kt             AdCallback (base), RewardCallback
-│   └── base/
-│       ├── BaseAdManager.kt           ALL waterfall logic — never duplicate
-│       └── NetworkAdLoader.kt         Abstract loader — 1 network × 1 format
+│   ├── model/  AdEnums.kt (AdNetwork, AdFormat, AdLoadState, BannerAdSize)
+│   │           AdModels.kt (AdError, NetworkAdUnit, AdUnitConfig)
+│   ├── callback/ AdCallback, RewardCallback, FullScreenCallbacks
+│   └── base/   BaseAdManager (waterfall+state), NetworkAdLoader (1 SDK × 1 format)
 │
-├── admob/
-│   ├── interstitial/
-│   │   ├── AdMobInterstitialLoader    InterstitialAd SDK calls
-│   │   └── InterstitialAdManager     createLoader() only
-│   ├── rewarded/
-│   │   ├── AdMobRewardedLoader        RewardedAd + OnUserEarnedRewardListener
-│   │   └── RewardedAdManager         load(RewardCallback), dispatchReward()
-│   ├── banner/
-│   │   ├── AdMobBannerLoader          AdView, BannerAdSize→AdSize conversion
-│   │   └── BannerAdManager           attach(container), pause(), resume()
-│   └── native_ad/
-│       ├── AdMobNativeLoader          AdLoader, inflate+populate NativeAdView
-│       └── NativeAdManager           attach(container)
+├── admob/  {banner,interstitial,native_ad,rewarded}/  loader + manager
+├── meta/   {banner,interstitial,native_ad,rewarded}/  FAN loaders
+├── unity/  {banner,interstitial,rewarded}/            Unity loaders (no native)
 │
-├── meta/
-│   ├── interstitial/MetaInterstitialLoader    FAN InterstitialAd
-│   ├── rewarded/MetaRewardedLoader            FAN RewardedVideoAd
-│   ├── banner/MetaBannerLoader                FAN AdView, FanAdSize conversion
-│   └── native_ad/MetaNativeLoader             FAN NativeAd, registerViewForInteraction
+├── smart/  SmartAdManager, SmartAdConfig, InterstitialPreloader,
+│           RewardedAdPreloader, AppOpenAdPreloader, NativeAdCache,
+│           AdRetryScheduler, FullScreenAdState
 │
-├── unity/
-│   ├── interstitial/UnityInterstitialLoader   UnityAds.load + UnityAds.show
-│   ├── rewarded/UnityRewardedLoader           COMPLETED→reward, SKIPPED→no reward
-│   └── banner/UnityBannerLoader               BannerView (requires Activity context)
-│
-├── consent/ConsentManager.kt          Google UMP wrapper — canRequestAds gate
-├── config/RemoteConfigManager.kt      Firebase Remote Config — toggle ads remotely
-└── util/AdLog.kt                      Logging — off in release
+├── config/ RemoteConfigManager
+│   └── remote/ RemoteConfigParser, AdsRemoteConfig, AdsConfigRepository,
+│               FrequencyCapManager
+├── consent/ ConsentManager (UMP + timeout)
+└── util/   AdLog
 ```
 
 ---
 
-## 8. State Ownership Rules
+## 11. State Ownership Rules
 
 | State | Owner |
 |-------|-------|
 | `AdLoadState` per loader | `NetworkAdLoader.state` |
-| `AdLoadState` per placement | `BaseAdManager.state` |
-| `loadedLoader` reference | `BaseAdManager` (private) |
-| `callback` reference | `BaseAdManager` (private) |
-| `rewardCallback` reference | `RewardedAdManager` (private) |
-| SDK ad object (e.g. `InterstitialAd`) | `NetworkAdLoader` subclass |
-| SDK view object (e.g. `AdView`) | `NetworkAdLoader` subclass |
+| `AdLoadState` per placement | `BaseAdManager.state` (reset to IDLE by `onFullScreenClosed`) |
+| `loadedLoader` / `callback` | `BaseAdManager` (private) |
+| SDK ad object (`InterstitialAd`, `RewardedAd`, `NativeAd`, …) | `NetworkAdLoader` subclass |
+| SDK view object (`AdView`, `NativeAdView`, `BannerView`) | `NetworkAdLoader` subclass |
+| `ready/showing/loadingManager`, `loadedAt` | each preloader (smart/) |
+| Process-wide full-screen flag | `FullScreenAdState` |
+| Parsed RC config | `AdsConfigRepository.config` (@Volatile) |
+
+> Rewards flow through `FullScreenCallbacks.onRewardEarned` → `dispatch` cast to
+> `RewardCallback`. `RewardedAdManager` no longer keeps a separate
+> `rewardCallback` field.
 
 ---
 
-## 9. How to Add a New Network (e.g. AppLovin)
+## 12. Lifecycle Checklist
 
-```
-1. Create loader:
-   applovin/interstitial/AppLovinInterstitialLoader : NetworkAdLoader
-       → implement load(), show(), destroy()
-       → call onLoaded() / onFailed() on main thread
+| Ad Type | onResume | onPause | onStart/onStop | onDestroy |
+|---------|----------|---------|----------------|-----------|
+| Interstitial (per-screen) | — | — | — | `manager.destroy()` |
+| Rewarded (per-screen) | — | — | — | `manager.destroy()` |
+| Banner | `resume()` | `pause()` | — | `destroy()` |
+| Native | — | — | — | `destroy()` (→ `nativeAd.destroy()`) |
+| SmartAdManager rewarded | — | — | `prepareRewarded`/`releaseRewarded` | (survives rotation) |
+| SmartAdManager (whole) | — | — | re-armed on app foreground | `SmartAdManager.destroy()` only on process shutdown |
 
-2. Add network enum value:
-   AdEnums.kt → enum class AdNetwork { ADMOB, META, UNITY, APPLOVIN }
-
-3. Wire into manager:
-   InterstitialAdManager.createLoader():
-       AdNetwork.APPLOVIN -> AppLovinInterstitialLoader(unit, ...)
-
-4. App usage:
-   waterfall = listOf(
-       NetworkAdUnit(AdNetwork.ADMOB,    "admob_id"),
-       NetworkAdUnit(AdNetwork.APPLOVIN, "applovin_id"),
-   )
-```
+> Do NOT call `SmartAdManager.destroy()` from `Activity.onDestroy()` — the
+> preloaders survive rotation.
 
 ---
 
-## 10. How to Add a New Format (e.g. App Open)
+## 13. Extending the Library
 
+### Add a network (e.g. AppLovin)
 ```
-1. Create AdMob loader:
-   admob/appopen/AdMobAppOpenLoader : NetworkAdLoader
-       → use AppOpenAd.load() + AppOpenAd.show()
+1. applovin/interstitial/AppLovinInterstitialLoader : NetworkAdLoader
+   → load()/show()/destroy(); report via the FullScreenCallbacks it's given.
+2. AdEnums.kt: enum AdNetwork { ADMOB, META, UNITY, APPLOVIN }
+3. InterstitialAdManager.createLoader(): AdNetwork.APPLOVIN -> AppLovinInterstitialLoader(unit, fullScreenCallbacks())
+4. RemoteConfigParser.toNetwork(): "applovin" -> APPLOVIN
+5. Init the SDK (with consent) in AdsSdk.initialize().
+```
 
-2. Create manager:
-   admob/appopen/AppOpenAdManager : BaseAdManager
-       override fun createLoader(unit) = when(unit.network) {
-           AdNetwork.ADMOB -> AdMobAppOpenLoader(...)
-           else -> null
-       }
-
-3. App usage:
-   val mgr = AppOpenAdManager(config)
-   mgr.load(context, callback)
-   mgr.show(activity)   ← in onStart() or after splash
+### Add a format
+```
+1. admob/<format>/AdMob<Format>Loader : NetworkAdLoader
+2. admob/<format>/<Format>AdManager : BaseAdManager (createLoader only)
+3. (optional) wire a preloader into SmartAdManager + an AdsConfigRepository builder.
 ```
 
 ---
 
-## 11. Lifecycle Checklist
-
-| Ad Type | onPause | onResume | onDestroy |
-|---------|---------|----------|-----------|
-| Interstitial | — | — | `manager.destroy()` |
-| Rewarded | — | — | `manager.destroy()` |
-| Banner | `manager.pause()` | `manager.resume()` | `manager.destroy()` |
-| Native | — | — | `manager.destroy()` ← calls `nativeAd.destroy()` |
-
----
-
-## 12. Remote Config Integration
+## 14. Quick Reference — Complete Boot Sequence
 
 ```
-AdsSdk.remoteConfig.init(
-    defaults = mapOf(
-        "ads_enabled"           to true,
-        "interstitial_enabled"  to true,
-        "interstitial_interval" to 60L,
-    )
-)
-
-// Before loading:
-if (!AdsSdk.remoteConfig.isAdsEnabled()) return
-
-// Disable a specific network dynamically:
-NetworkAdUnit(AdNetwork.META, "meta_id", enabled = remoteConfig.getBoolean("meta_enabled"))
-```
-
----
-
-## 13. Quick Reference — Complete Boot Sequence
-
-```
-App Launch
-    │
-    ▼
-ConsentManager.gatherConsent()
-    │ canRequestAds == true
-    ▼
-AdsSdk.initialize(debug = BuildConfig.DEBUG)
-    │ MobileAds ready
-    ▼
-┌───────────────────────────────────────────┐
-│  Parallel load:                           │
-│  InterstitialAdManager.load()             │
-│  RewardedAdManager.load()                 │
-│  BannerAdManager.load() → attach()        │
-│  NativeAdManager.load() → attach()        │
-└───────────────────────────────────────────┘
-    │ each walks its waterfall independently
-    ▼
-AdCallback.onLoaded(network)   ← per format
-    │
-    ▼ [user action]
-manager.show(activity)          ← interstitial / rewarded only
-    │
-    ▼
-onDismissed() → manager.destroy() → load() again
+App.onCreate (MyLibrary)
+    └─ RemoteConfigManager.init → fetch → AdsConfigRepository.load(ads_config)
+MainActivity
+    └─ AdsLib.initWithActivity
+         ├─ ConsentManager.gatherConsent (UMP, 8s timeout)
+         │     canRequestAds == false → onBlocked (no ads)
+         └─ canRequestAds == true
+              └─ AdsSdk.initialize (Meta+Unity consent → init; then AdMob)
+                   ├─ MyLibrary.onAdsReady → SmartAdManager.init  [if provideAdsConfig != null]
+                   └─ onReady (app)
+                        ├─ per-screen: BannerAdManager / NativeAdManager
+                        │              / InterstitialAdManager / RewardedAdManager
+                        │              .load() → waterfall → onLoaded → show()/attach()
+                        └─ SmartAdManager.tryShowInterstitial / showRewarded / attachNative
+    └─ dismiss → onFullScreenClosed() → onDismissed() → reload
 ```

@@ -14,7 +14,7 @@ object AdsConfigDefaults {
     {
       "ads": {
         "enabled": true,
-        "provider_priority": ["admob", "meta", "unity"],
+        "provider_priority": ["meta","admob", "unity"],
         "providers": {
           "admob": {
             "enabled": true,
@@ -51,7 +51,7 @@ object AdsConfigDefaults {
             "interstitial": {
               "enabled": true,
               "frequency": 3,
-              "search": { "placement_id": "META_INTERSTITIAL_SEARCH" }
+              "search": { "placement_id": "3902462033390284_3902469603389527" }
             },
             "native": {
               "detail": { "enabled": true, "placement_id": "META_NATIVE_DETAIL" }
@@ -62,6 +62,10 @@ object AdsConfigDefaults {
             "game_id": "1234567",
             "banner": {
               "home": { "enabled": true, "placement_id": "Banner_Android" }
+            },
+            "interstitial": {
+              "enabled": true,
+              "search": { "placement_id": "Rewarded_Android" }
             }
           }
         }
