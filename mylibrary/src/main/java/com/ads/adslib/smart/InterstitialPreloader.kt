@@ -6,9 +6,7 @@ import com.ads.adslib.admob.interstitial.InterstitialAdManager
 import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.model.AdError
-import com.ads.adslib.core.model.AdFormat
 import com.ads.adslib.core.model.AdNetwork
-import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.util.AdLog
 
 /**
@@ -112,16 +110,13 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
         val context = appContext ?: return
         // Guard against concurrent loads (onShown + onDismissed both call load()).
         if (loadingManager != null) return
-        // RC kill-switch for the whole format (once RC has loaded).
-        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.interstitialEnabledAnywhere()) {
-            AdLog.d("interstitial_preloader", "interstitial disabled in RC — skipping load")
+        // Units + waterfall come entirely from Remote Config; null = disabled /
+        // not configured for this screen / RC not loaded yet (re-kicked on load).
+        val adConfig = AdsConfigRepository.interstitialConfig(config.interstitialScreen) ?: run {
+            AdLog.d("interstitial_preloader",
+                "no RC interstitial for '${config.interstitialScreen}' — skipping load")
             return
         }
-        val adConfig = AdUnitConfig(
-            placementKey = "smart_interstitial",
-            format       = AdFormat.INTERSTITIAL,
-            waterfall    = config.interstitialUnits(),
-        )
         val mgr = InterstitialAdManager(adConfig)
         loadingManager = mgr
 

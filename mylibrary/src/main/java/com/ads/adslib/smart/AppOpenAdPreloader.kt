@@ -57,6 +57,12 @@ internal class AppOpenAdPreloader(
         loadAd()
     }
 
+    /** Called when Remote Config (re)loads — attempt a load if we hold none. */
+    fun onConfigLoaded() {
+        retry.reset()
+        if (appOpenAd == null) loadAd()
+    }
+
     fun destroy() {
         retry.cancel()
         application.unregisterActivityLifecycleCallbacks(this)
@@ -163,12 +169,9 @@ internal class AppOpenAdPreloader(
             AdLog.d("appopen_preloader", "load skipped — ads disabled in Remote Config")
             return
         }
-        // RC is the source of truth once loaded (null => app-open disabled);
-        // fall back to the SmartAdConfig unit only before RC has arrived.
-        val unitId = if (AdsConfigRepository.isLoaded)
-            AdsConfigRepository.appOpenUnitId()
-        else
-            config.appOpenUnitId.ifBlank { null }
+        // Unit id comes entirely from Remote Config (null => disabled / not
+        // configured / RC not loaded yet — re-kicked via onConfigLoaded()).
+        val unitId = AdsConfigRepository.appOpenUnitId()
         if (unitId.isNullOrBlank()) {
             AdLog.d("appopen_preloader", "no app-open unit configured — skipping")
             return

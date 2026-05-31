@@ -49,16 +49,17 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
      * Safe to call frequently — respects the cache size limit.
      */
     fun prefetch(context: Context) {
-        // RC kill-switch for the whole format (once RC has loaded).
-        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.nativeEnabledAnywhere()) {
-            AdLog.d("native_cache", "native disabled in RC — skipping prefetch")
+        // Unit id comes from Remote Config; null = AdMob native disabled / not
+        // configured for this screen / RC not loaded yet (re-kicked on load).
+        val unitId = AdsConfigRepository.admobNativeUnitId(config.nativeScreen) ?: run {
+            AdLog.d("native_cache", "no RC AdMob native for '${config.nativeScreen}' — skipping prefetch")
             return
         }
         pruneExpired()
         val needed = config.nativeCacheSize - cache.size - activeLoads
         if (needed <= 0) return
         AdLog.d("native_cache", "prefetching $needed ads (have ${cache.size})")
-        repeat(needed) { loadOne(context.applicationContext) }
+        repeat(needed) { loadOne(context.applicationContext, unitId) }
     }
 
     /**
@@ -105,9 +106,9 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
 
     // ── Internal ─────────────────────────────────────────────────────
 
-    private fun loadOne(context: Context) {
+    private fun loadOne(context: Context, unitId: String) {
         activeLoads++
-        AdLoader.Builder(context, config.nativeUnitId)
+        AdLoader.Builder(context, unitId)
             .forNativeAd { ad ->
                 if (cache.size < config.nativeCacheSize) {
                     cache.addLast(Slot(ad, System.currentTimeMillis()))
@@ -122,7 +123,7 @@ internal class NativeAdCache(private val config: SmartAdConfig) {
                 override fun onAdFailedToLoad(error: LoadAdError) {
                     activeLoads = (activeLoads - 1).coerceAtLeast(0)
                     AdLog.w("native_cache", "load failed: ${error.message}")
-                    retry.schedule { loadOne(context) }
+                    retry.schedule { loadOne(context, unitId) }
                 }
             })
             .withNativeAdOptions(NativeAdOptions.Builder().build())

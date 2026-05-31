@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
+import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.util.AdLog
 
@@ -21,14 +22,15 @@ import com.ads.adslib.util.AdLog
  * | Native       | LRU cache of N ads; expiry-aware; auto-prefetch    |
  *
  * ## Setup — call once in Application.onCreate after AdsSdk.initialize
+ * Ad unit IDs come from Remote Config; [SmartAdConfig] only names which RC
+ * screen each preloader serves, plus cache/retry tuning.
  * ```kotlin
  * SmartAdManager.init(
  *     application = this,
  *     config = SmartAdConfig(
- *         interstitialUnitId      = "ca-app-pub-.../...",
- *         rewardedUnitId          = "ca-app-pub-.../...",
- *         appOpenUnitId           = "ca-app-pub-.../...",
- *         nativeUnitId            = "ca-app-pub-.../...",
+ *         interstitialScreen      = "search",   // RC ads_config screen keys
+ *         rewardedScreen          = "search",
+ *         nativeScreen            = "detail",
  *         interstitialIntervalSec = 30,
  *         nativeCacheSize         = 3,
  *     )
@@ -77,6 +79,14 @@ object SmartAdManager {
         }
     }
 
+    /** Re-kick all preloaders once Remote Config (re)loads with fresh units. */
+    private fun onConfigLoaded() {
+        interstitialPreloader?.onForeground()
+        rewardedPreloader?.onForeground()
+        appRef?.let { nativeCache?.onForeground(it) }
+        appOpenPreloader?.onConfigLoaded()
+    }
+
     @Volatile
     private var initialized = false
 
@@ -100,6 +110,10 @@ object SmartAdManager {
         nativeCache           = NativeAdCache(config).also { it.prefetch(application) }
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(foregroundObserver)
+
+        // Remote Config may load AFTER init (async fetch) — re-kick preloaders
+        // once units become available.
+        AdsConfigRepository.setConfigLoadedListener { onConfigLoaded() }
 
         AdLog.d("smart_ad_manager", "initialized — preloading started")
     }
@@ -187,6 +201,7 @@ object SmartAdManager {
      */
     fun destroy() {
         ProcessLifecycleOwner.get().lifecycle.removeObserver(foregroundObserver)
+        AdsConfigRepository.setConfigLoadedListener(null)
         interstitialPreloader?.destroy()
         appOpenPreloader?.destroy()
         rewardedPreloader?.release()

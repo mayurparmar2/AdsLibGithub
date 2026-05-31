@@ -29,11 +29,11 @@ import com.ads.adslib.smart.SmartAdManager
  *     // preloaders (interstitial / rewarded / app-open / native cache).
  *     // Omit it (return null) to use only the Remote-Config per-screen
  *     // managers (BannerAdManager / NativeAdManager / InterstitialAdManager / …).
+ *     // Ad unit IDs come from Remote Config — only name the RC screen keys here.
  *     override fun provideAdsConfig() = SmartAdConfig(
- *         interstitialUnitId = "ca-app-pub-xxx/111",
- *         rewardedUnitId     = "ca-app-pub-xxx/222",
- *         appOpenUnitId      = "ca-app-pub-xxx/333",
- *         nativeUnitId       = "ca-app-pub-xxx/444",
+ *         interstitialScreen = "search",
+ *         rewardedScreen     = "search",
+ *         nativeScreen       = "detail",
  *     )
  * }
  * ```

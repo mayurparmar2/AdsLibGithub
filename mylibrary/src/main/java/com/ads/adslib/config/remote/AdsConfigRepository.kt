@@ -33,11 +33,21 @@ object AdsConfigRepository {
     private var config: AdsRemoteConfig = AdsRemoteConfig.EMPTY
     private var freqCap: FrequencyCapManager? = null
 
+    /** Notified after each successful [load] so late-arriving RC can kick preloaders. */
+    @Volatile
+    private var onConfigLoaded: (() -> Unit)? = null
+
+    /** Register a callback invoked every time the config is (re)loaded. */
+    fun setConfigLoadedListener(listener: (() -> Unit)?) {
+        onConfigLoaded = listener
+    }
+
     /** Parse and store the Remote Config JSON. Safe to call again on refresh. */
     fun load(context: Context, json: String) {
         config = RemoteConfigParser.parse(json)
         if (freqCap == null) freqCap = FrequencyCapManager(context)
         AdLog.d("ads_config", "loaded: enabled=${config.enabled}, priority=${config.providerPriority}")
+        onConfigLoaded?.invoke()
     }
 
     val isLoaded: Boolean get() = config !== AdsRemoteConfig.EMPTY
@@ -79,27 +89,15 @@ object AdsConfigRepository {
     /** Highest-priority enabled App Open ad unit id, or null if none/disabled. */
     fun appOpenUnitId(): String? = appOpenConfig()?.waterfall?.firstOrNull()?.adUnitId
 
-    // ── Format-level enable checks (for SmartAdManager preloaders) ────────
-    // SmartAdManager preloads app-wide (not per screen); these answer
-    // "is this format enabled by RC for ANY provider" so a preloader can be
-    // skipped entirely when RC turns the format off.
-
-    fun interstitialEnabledAnywhere(): Boolean =
-        config.enabled && config.providerPriority.any { net ->
-            config.providers[net]?.let { it.enabled && it.interstitialEnabled } == true
-        }
-
-    fun rewardedEnabledAnywhere(): Boolean =
-        config.enabled && config.providerPriority.any { net ->
-            config.providers[net]?.let { it.enabled && it.rewardedEnabled } == true
-        }
-
-    fun nativeEnabledAnywhere(): Boolean =
-        config.enabled && config.providerPriority.any { net ->
-            config.providers[net]?.let { p ->
-                p.enabled && p.native.values.any { it.enabled && it.adId.isNotBlank() }
-            } == true
-        }
+    /**
+     * AdMob native ad unit id for [screen], or null if AdMob native is disabled
+     * there. Used by the AdMob-only [com.ads.adslib.smart.NativeAdCache] prefetch.
+     */
+    fun admobNativeUnitId(screen: String): String? {
+        if (!config.enabled) return null
+        val admob = config.providers[AdNetwork.ADMOB]?.takeIf { it.enabled } ?: return null
+        return admob.native[screen]?.takeIf { it.enabled && it.adId.isNotBlank() }?.adId
+    }
 
     // ── Interstitial frequency ───────────────────────────────────────
 

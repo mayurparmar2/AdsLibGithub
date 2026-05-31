@@ -6,9 +6,7 @@ import com.ads.adslib.admob.rewarded.RewardedAdManager
 import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
-import com.ads.adslib.core.model.AdFormat
 import com.ads.adslib.core.model.AdNetwork
-import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.util.AdLog
 
 /**
@@ -128,16 +126,13 @@ internal class RewardedAdPreloader(private val config: SmartAdConfig) {
         val context = appContext ?: return
         // Guard against concurrent loads (onShown + onDismissed both call load()).
         if (loadingManager != null) return
-        // RC kill-switch for the whole format (once RC has loaded).
-        if (AdsConfigRepository.isLoaded && !AdsConfigRepository.rewardedEnabledAnywhere()) {
-            AdLog.d("rewarded_preloader", "rewarded disabled in RC — skipping load")
+        // Units + waterfall come entirely from Remote Config; null = disabled /
+        // not configured for this screen / RC not loaded yet (re-kicked on load).
+        val adConfig = AdsConfigRepository.rewardedConfig(config.rewardedScreen) ?: run {
+            AdLog.d("rewarded_preloader",
+                "no RC rewarded for '${config.rewardedScreen}' — skipping load")
             return
         }
-        val adConfig = AdUnitConfig(
-            placementKey = "smart_rewarded",
-            format       = AdFormat.REWARDED,
-            waterfall    = config.rewardedUnits(),
-        )
         val mgr = RewardedAdManager(adConfig)
         loadingManager = mgr
 

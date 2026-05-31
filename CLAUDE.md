@@ -75,7 +75,7 @@ com.ads.adslib
 ├── unity/{banner,interstitial,rewarded}/             # Unity loaders (no native)
 ├── smart/                         # preloading layer:
 │   ├── SmartAdManager.kt          #   facade — wires the preloaders, re-arms on foreground
-│   ├── SmartAdConfig.kt           #   unit IDs + tuning (fallback when RC absent)
+│   ├── SmartAdConfig.kt           #   RC screen keys + cache/retry tuning (NO unit IDs)
 │   ├── InterstitialPreloader.kt   #   double-buffered, expiry-aware
 │   ├── RewardedAdPreloader.kt     #   on-demand per screen, expiry-aware
 │   ├── AppOpenAdPreloader.kt      #   ProcessLifecycle foreground show, RC-gated
@@ -123,6 +123,7 @@ reused for every format. Per-format managers only implement `createLoader(unit: 
 - `BaseAdManager.onFullScreenClosed()` resets state to IDLE on dismiss/show-fail so a manager can be reloaded.
 - SDK init order in `AdsSdk.initialize()`: forward consent to Meta (`AdSettings.setDataProcessingOptions`) and Unity (`MetaData("gdpr.consent")`) BEFORE initializing them; never init a network SDK from a loader.
 - `SmartAdManager` (app-wide preloading) is **opt-in**: `MyLibrary.provideAdsConfig()` returns `SmartAdConfig?` and defaults to null. Returning null skips `SmartAdManager.init` entirely; the app then uses only the RC per-screen managers. All `SmartAdManager` public methods are null-safe when it was never initialized.
+- `SmartAdConfig` holds **no ad unit IDs** — every preloader resolves its units from `AdsConfigRepository` (Remote Config) by the screen key named in the config (`interstitialScreen`/`rewardedScreen`/`nativeScreen`); App Open uses `appOpenUnitId()`. RC may load after `SmartAdManager.init`, so preloaders are re-kicked via `AdsConfigRepository.setConfigLoadedListener`. `NativeAdCache` is AdMob-only (`admobNativeUnitId`).
 
 ## Usage flow (reference for demo app / docs)
 
