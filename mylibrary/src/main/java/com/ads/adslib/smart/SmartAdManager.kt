@@ -122,10 +122,19 @@ object SmartAdManager {
 
     /**
      * Show the preloaded interstitial if ready and interval has passed.
+     *
+     * @param onClosed invoked exactly once: when the ad is dismissed, or
+     *   immediately if no ad could be shown. Lets callers always proceed
+     *   (e.g. navigate) whether or not an ad displayed.
      * @return true if the ad was shown.
      */
-    fun tryShowInterstitial(activity: Activity): Boolean =
-        interstitialPreloader?.tryShow(activity) ?: false
+    fun tryShowInterstitial(
+        activity: Activity,
+        ignoreInterval: Boolean = false,
+        onClosed: () -> Unit = {}
+    ): Boolean =
+        interstitialPreloader?.tryShow(activity, ignoreInterval, onClosed)
+            ?: run { onClosed(); false }
 
     val isInterstitialReady: Boolean
         get() = interstitialPreloader?.isReady == true

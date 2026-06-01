@@ -11,6 +11,13 @@ import com.ads.adslib.smart.SmartAdConfig
  */
 class App : MyLibrary() {
 
+    companion object{
+        var instance :App? = null
+    }
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
     override fun isDebugBuild(): Boolean = BuildConfig.DEBUG
 
     // OPTIONAL — enable the app-wide SmartAdManager preloaders. Ad unit IDs come

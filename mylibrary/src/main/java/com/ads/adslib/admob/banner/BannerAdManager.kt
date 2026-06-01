@@ -1,6 +1,8 @@
 package com.ads.adslib.admob.banner
 
+import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import com.ads.adslib.core.base.BaseAdManager
 import com.ads.adslib.core.base.NetworkAdLoader
 import com.ads.adslib.core.model.AdNetwork
@@ -71,8 +73,26 @@ class BannerAdManager(config: AdUnitConfig) : BaseAdManager(config) {
             AdLog.w(config.placementKey, "attach() called but no banner view ready")
             return
         }
+        // Detach from any previous parent so the same banner view can be
+        // re-attached into a new container (Compose recompose / item recycle).
+        (view.parent as? ViewGroup)?.removeView(view)
         container.removeAllViews()
-        container.addView(view)
+        // Center the banner. Adaptive AdMob/Meta banners measure to full width
+        // (WRAP_CONTENT = full width), while fixed-size networks (e.g. Unity's
+        // 320x50) are narrower — centering stops them sitting left-aligned with
+        // an empty gap on the right.
+        if (container is FrameLayout) {
+            container.addView(
+                view,
+                FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER,
+                ),
+            )
+        } else {
+            container.addView(view)
+        }
         AdLog.d(config.placementKey, "banner attached via ${readyLoader?.network}")
     }
 

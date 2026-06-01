@@ -57,6 +57,7 @@ object AdsSdk {
         debug: Boolean = false,
         hasConsent: Boolean = true,
         testDeviceIds: List<String> = emptyList(),
+        metaTestDeviceHashes: List<String> = emptyList(),
         unityGameId: String? = null,
         onComplete: () -> Unit = {}
     ) {
@@ -89,7 +90,10 @@ object AdsSdk {
         }
 
         // Meta Audience Network — init + forward consent BEFORE any FAN ad loads.
-        initMeta(appContext, hasConsent)
+        initMeta(appContext, hasConsent, if (debug) metaTestDeviceHashes else emptyList())
+        if(debug){
+            AdSettings.setTestMode(false)
+        }
 
         // Unity Ads inits independently of AdMob (its own SDK).
         initUnity(appContext, unityGameId, debug, hasConsent)
@@ -113,7 +117,7 @@ object AdsSdk {
      * Wrapped in runCatching so a missing/incompatible FAN build never crashes
      * host SDK init — the Meta waterfall rung simply fails later if absent.
      */
-    private fun initMeta(context: Context, hasConsent: Boolean) {
+    private fun initMeta(context: Context, hasConsent: Boolean, testDeviceHashes: List<String>) {
         runCatching {
             // setDataProcessingOptions(emptyArray) = no restriction (consent given);
             // ["LDU"] = Limited Data Use for opted-out / CCPA users.
@@ -121,6 +125,12 @@ object AdsSdk {
                 AdSettings.setDataProcessingOptions(arrayOf())
             } else {
                 AdSettings.setDataProcessingOptions(arrayOf("LDU"), 0, 0)
+            }
+            // Debug only — register Meta test devices so FAN serves test ads
+            // instead of "No fill". Each device's hash is printed in logcat by the
+            // Meta SDK on first request ("add AdSettings.addTestDevice(...)").
+            if (testDeviceHashes.isNotEmpty()) {
+                AdSettings.addTestDevices(testDeviceHashes)
             }
             if (!AudienceNetworkAds.isInitialized(context)) {
                 AudienceNetworkAds.initialize(context)

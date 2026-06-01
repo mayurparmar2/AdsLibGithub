@@ -70,4 +70,6 @@ data class ProviderConfig(
 data class PlacementEntry(
     val enabled: Boolean,
     val adId: String,
+    /** Native-only: render style from the entry's `type` field. */
+    val nativeType: com.ads.adslib.core.model.NativeType = com.ads.adslib.core.model.NativeType.NATIVE,
 )

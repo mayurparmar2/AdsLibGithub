@@ -13,36 +13,42 @@ import com.ads.adslib.core.base.NetworkAdLoader
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
+import com.ads.adslib.core.model.NativeAdStyle
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.facebook.ads.Ad
 import com.facebook.ads.AdError as FanAdError
 import com.facebook.ads.AdOptionsView
 import com.facebook.ads.MediaView
-import com.facebook.ads.NativeAd as FanNativeAd
 import com.facebook.ads.NativeAdListener
+import com.facebook.ads.NativeBannerAd
 
-class MetaNativeLoader(
+/**
+ * Meta (Audience Network) **Native Banner** loader — a compact native ad
+ * (icon/logo + title + CTA, no main media). The placement in Monetisation
+ * Manager must be created with format "Native banner".
+ *
+ * Selected via the `type: "native_banner"` field on a native entry in Remote
+ * Config (see [com.ads.adslib.core.model.NativeType]).
+ */
+class MetaNativeBannerLoader(
     unit: NetworkAdUnit,
-    private val style: com.ads.adslib.core.model.NativeAdStyle? = null,
+    private val style: NativeAdStyle? = null,
     private val onClickedCb: (AdNetwork) -> Unit,
     private val onImpressionCb: (AdNetwork) -> Unit
 ) : NetworkAdLoader(unit) {
 
-    private var nativeAd: FanNativeAd? = null
+    private var nativeBannerAd: NativeBannerAd? = null
     private var adView: View? = null
 
     override fun load(context: Context, onLoaded: () -> Unit, onFailed: (AdError) -> Unit) {
         state = AdLoadState.LOADING
-        val ad = FanNativeAd(context, unit.adUnitId)
-        nativeAd = ad
+        val ad = NativeBannerAd(context, unit.adUnitId)
+        nativeBannerAd = ad
 
         val config = ad.buildLoadAdConfig()
             .withAdListener(object : NativeAdListener {
                 override fun onAdLoaded(a: Ad) {
-                    // Loader may have been destroyed before the async load finished
-                    // (e.g. the screen left / the Compose slot was disposed) — in
-                    // that case nativeAd is null, so ignore this late callback.
-                    val current = nativeAd ?: return
+                    val current = nativeBannerAd ?: return
                     adView = inflateAndPopulate(context, current)
                     state = AdLoadState.LOADED
                     onLoaded()
@@ -60,60 +66,40 @@ class MetaNativeLoader(
         ad.loadAd(config)
     }
 
-    private fun inflateAndPopulate(context: Context, ad: FanNativeAd): View {
+    private fun inflateAndPopulate(context: Context, ad: NativeBannerAd): View {
         val view = LayoutInflater.from(context)
-            .inflate(R.layout.native_ad_layout_1, null)
-
-        // Restore full-width dropped by inflating with a null root.
+            .inflate(R.layout.native_banner_layout, null)
         view.layoutParams = ViewGroup.LayoutParams(
             ViewGroup.LayoutParams.MATCH_PARENT,
             ViewGroup.LayoutParams.WRAP_CONTENT,
         )
 
-        val iconView     = view.findViewById<MediaView>(R.id.native_ad_icon)
-        val titleView    = view.findViewById<TextView>(R.id.native_ad_title)
-        val sponsoredView= view.findViewById<TextView>(R.id.native_ad_sponsored_label)
-        val choicesBox   = view.findViewById<LinearLayout>(R.id.ad_choices_container)
-        val mediaView    = view.findViewById<MediaView>(R.id.native_ad_media)
-        val socialView   = view.findViewById<TextView>(R.id.native_ad_social_context)
-        val bodyView     = view.findViewById<TextView>(R.id.native_ad_body)
-        val ctaButton    = view.findViewById<Button>(R.id.native_ad_call_to_action)
+        val iconView     = view.findViewById<MediaView>(R.id.native_banner_icon)
+        val titleView    = view.findViewById<TextView>(R.id.native_banner_title)
+        val sponsoredView= view.findViewById<TextView>(R.id.native_banner_sponsored)
+        val choicesBox   = view.findViewById<LinearLayout>(R.id.native_banner_adchoices)
+        val ctaButton    = view.findViewById<Button>(R.id.native_banner_cta)
 
-        // Populate text
         titleView.text     = ad.advertiserName ?: ""
         sponsoredView.text = "Sponsored"
-        bodyView.text      = ad.adBodyText ?: ""
-        socialView.text    = ad.adSocialContext ?: ""
-
-        // CTA
         ctaButton.text       = ad.adCallToAction ?: ""
         ctaButton.visibility = if (ad.hasCallToAction()) View.VISIBLE else View.GONE
 
-        // Apply optional host theme colors so the template adapts (esp. dark mode).
+        // Optional host theme colors.
         style?.let { s ->
             s.backgroundColor?.let { view.setBackgroundColor(it) }
             s.titleColor?.let { titleView.setTextColor(it) }
-            s.bodyColor?.let {
-                bodyView.setTextColor(it)
-                socialView.setTextColor(it)
-                sponsoredView.setTextColor(it)
-            }
+            s.bodyColor?.let { sponsoredView.setTextColor(it) }
             s.ctaTextColor?.let { ctaButton.setTextColor(it) }
             s.ctaBackgroundColor?.let { ctaButton.setBackgroundColor(it) }
         }
 
-        // AdChoices icon (required by Meta policy)
         val adChoicesView = AdOptionsView(context, ad, null)
         choicesBox.removeAllViews()
         choicesBox.addView(adChoicesView)
 
-        // Register view for interaction — enables click + impression tracking
-        ad.registerViewForInteraction(
-            view,
-            mediaView,
-            iconView,
-            listOf(ctaButton, titleView, iconView, view)
-        )
+        // Native banner registers the icon MediaView (no main media view).
+        ad.registerViewForInteraction(view, iconView, listOf(ctaButton, titleView, view))
 
         return view
     }
@@ -125,9 +111,9 @@ class MetaNativeLoader(
     override fun isReady(): Boolean = adView != null && state == AdLoadState.LOADED
 
     override fun destroy() {
-        nativeAd?.unregisterView()
-        nativeAd?.destroy()
-        nativeAd = null
+        nativeBannerAd?.unregisterView()
+        nativeBannerAd?.destroy()
+        nativeBannerAd = null
         adView = null
         state = AdLoadState.IDLE
     }

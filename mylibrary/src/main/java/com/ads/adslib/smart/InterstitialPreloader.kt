@@ -32,6 +32,10 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
     private var loadedAt = 0L
     private var appContext: Context? = null
 
+    /** Caller callback for the in-flight show — fired once on dismiss/fail. */
+    @Volatile
+    private var pendingOnClosed: (() -> Unit)? = null
+
     // AdMob full-screen ads expire ~1h after load; refresh a touch earlier.
     private val expiryMs = 55 * 60 * 1_000L
 
@@ -52,8 +56,18 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
     /**
      * Shows the preloaded interstitial if ready and the interval has passed.
      * Triggers the next preload automatically via [AdCallback.onShown].
+     *
+     * @param onClosed invoked exactly once on the main thread: when the shown ad
+     *   is dismissed (or fails to show), or — if no ad could be shown this time
+     *   (not ready / interval guard / expired) — immediately. This lets callers
+     *   always proceed (e.g. navigate) regardless of whether an ad displayed.
+     * @return true if an ad was actually shown.
      */
-    fun tryShow(activity: Activity): Boolean {
+    fun tryShow(
+        activity: Activity,
+        ignoreInterval: Boolean = false,
+        onClosed: () -> Unit = {}
+    ): Boolean {
         // Discard a stale (expired) preload before attempting to show.
         if (readyManager != null && System.currentTimeMillis() - loadedAt > expiryMs) {
             AdLog.d("interstitial_preloader", "preloaded ad expired — discarding & reloading")
@@ -64,23 +78,36 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
         val mgr = readyManager
         if (mgr == null || !mgr.isReady()) {
             AdLog.d("interstitial_preloader", "not ready — still loading")
+            onClosed()
             return false
         }
+        // The interval guard prevents two interstitials in quick succession for
+        // automatic triggers (navigation). Deliberate user actions (e.g. an
+        // unlock-ad fallback) pass ignoreInterval=true to bypass it.
         val elapsed = System.currentTimeMillis() - lastShownAt
         val intervalMs = config.interstitialIntervalSec * 1_000L
-        if (elapsed < intervalMs) {
+        if (!ignoreInterval && elapsed < intervalMs) {
             AdLog.d("interstitial_preloader",
                 "interval not passed — ${(intervalMs - elapsed) / 1000}s remaining")
+            onClosed()
             return false
         }
 
         // Promote ready → showing; readyManager freed for the next preload.
         // lastShownAt is set in onShown (confirmed display), not here, so a
         // failed show doesn't wrongly start the interval clock.
+        pendingOnClosed = onClosed
         showingManager = mgr
         readyManager = null
         mgr.show(activity)
         return true
+    }
+
+    /** Fire & clear the caller's pending onClosed exactly once. */
+    private fun firePendingClosed() {
+        val cb = pendingOnClosed
+        pendingOnClosed = null
+        cb?.invoke()
     }
 
     val isReady: Boolean
@@ -151,6 +178,7 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
                 // Current ad finished — free the manager that just showed.
                 showingManager?.destroy()
                 showingManager = null
+                firePendingClosed()
                 // Safety net: if the on-show preload somehow failed, retry.
                 if (readyManager == null && !retry.isExhausted) load()
             }
@@ -159,6 +187,7 @@ internal class InterstitialPreloader(private val config: SmartAdConfig) {
                 FullScreenAdState.onClosed()
                 showingManager?.destroy()
                 showingManager = null
+                firePendingClosed()
                 if (readyManager == null) load()
             }
         })

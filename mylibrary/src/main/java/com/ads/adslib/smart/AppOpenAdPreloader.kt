@@ -7,6 +7,9 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.ads.adslib.config.remote.AdsConfigRepository
+import com.ads.adslib.core.callback.AdEvents
+import com.ads.adslib.core.model.AdFormat
+import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.util.AdLog
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
@@ -145,6 +148,11 @@ internal class AppOpenAdPreloader(
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdShowedFullScreenContent() {
                 AdLog.d("appopen_preloader", "shown")
+                AdEvents.onAppOpenShown?.invoke()
+                AdEvents.onAdShown?.invoke(AdNetwork.ADMOB, AdFormat.APP_OPEN)
+            }
+            override fun onAdClicked() {
+                AdEvents.onAdClicked?.invoke(AdNetwork.ADMOB, AdFormat.APP_OPEN)
             }
             override fun onAdDismissedFullScreenContent() {
                 AdLog.d("appopen_preloader", "dismissed — reloading")

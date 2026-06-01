@@ -14,6 +14,7 @@ import com.ads.adslib.core.base.NetworkAdLoader
 import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
+import com.ads.adslib.core.model.NativeAdStyle
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
@@ -26,6 +27,7 @@ import com.google.android.gms.ads.nativead.NativeAdView
 
 class AdMobNativeLoader(
     unit: NetworkAdUnit,
+    private val style: NativeAdStyle? = null,
     private val onClickedCb: (AdNetwork) -> Unit,
     private val onImpressionCb: (AdNetwork) -> Unit
 ) : NetworkAdLoader(unit) {
@@ -112,6 +114,25 @@ class AdMobNativeLoader(
         view.storeView?.let {
             it.visibility = if (ad.store != null) View.VISIBLE else View.GONE
             (it as TextView).text = ad.store
+        }
+
+        // Apply optional host theme colors so the template adapts (esp. dark mode).
+        style?.let { s ->
+            s.backgroundColor?.let { bg ->
+                // The white background lives on the inner LinearLayout, not the
+                // NativeAdView root — clear both so the host card shows through.
+                view.setBackgroundColor(bg)
+                (view.getChildAt(0))?.setBackgroundColor(bg)
+            }
+            s.titleColor?.let { (view.headlineView as? TextView)?.setTextColor(it) }
+            s.bodyColor?.let { c ->
+                (view.bodyView as? TextView)?.setTextColor(c)
+                (view.advertiserView as? TextView)?.setTextColor(c)
+                (view.priceView as? TextView)?.setTextColor(c)
+                (view.storeView as? TextView)?.setTextColor(c)
+            }
+            s.ctaTextColor?.let { (view.callToActionView as? Button)?.setTextColor(it) }
+            s.ctaBackgroundColor?.let { (view.callToActionView as? Button)?.setBackgroundColor(it) }
         }
 
         // Must be called after all views are registered and populated

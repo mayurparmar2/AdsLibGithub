@@ -1,6 +1,7 @@
 plugins {
+    // AGP 9 has built-in Kotlin support — do NOT also apply
+    // org.jetbrains.kotlin.android or it double-registers the `kotlin` extension.
     id("com.android.library")
-    id("org.jetbrains.kotlin.android")
     id("maven-publish")
 }
 
@@ -26,8 +27,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
+    // AGP 8+/9 require explicitly declaring which variant is published so the
+    // `components["release"]` software component exists for maven-publish below.
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 }
 
@@ -66,7 +71,7 @@ afterEvaluate {
                 from(components["release"])
                 groupId = "com.demo.mydemo"
                 artifactId = "ads-libs"
-                version = "1.2"
+                version = "1.3"
             }
         }
     }

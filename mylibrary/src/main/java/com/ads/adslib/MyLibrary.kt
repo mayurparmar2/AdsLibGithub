@@ -4,8 +4,15 @@ import android.app.Application
 import android.content.Context
 import android.util.Log
 import com.ads.adslib.config.remote.AdsConfigRepository
+import com.ads.adslib.core.model.AdError
 import com.ads.adslib.smart.SmartAdConfig
 import com.ads.adslib.smart.SmartAdManager
+import com.facebook.ads.Ad
+import com.facebook.ads.AdSettings
+import com.facebook.ads.RewardedInterstitialAd
+import com.facebook.ads.RewardedInterstitialAdListener
+import com.facebook.ads.RewardedVideoAd
+import com.facebook.ads.RewardedVideoAdListener
 
 /**
  * Base Application class for any app that uses AdsLib.
@@ -153,4 +160,57 @@ abstract class MyLibrary : Application() {
      * Provide its default value via [provideRemoteConfigDefaults].
      */
     open fun remoteConfigJsonKey(): String = "ads_config"
+
+
+    private var rewardedVideoAd: RewardedInterstitialAd? = null
+
+    public fun showRewardedAd() {
+
+        if (rewardedVideoAd?.isAdLoaded == true &&
+            !rewardedVideoAd!!.isAdInvalidated
+        ) {
+            rewardedVideoAd?.show()
+        } else {
+            Log.d("META_AD", "Ad Not Ready")
+        }
+    }
+
+    public fun loadRewardedAd() {
+        AdSettings.setTestMode(true)
+        AdSettings.addTestDevice("B4B4E16E557B7233F5CFFED447976829")
+
+        rewardedVideoAd = RewardedInterstitialAd(
+            this,
+            "VID_HD_16_9_46S_APP_INSTALL#YOUR_PLACEMENT_ID"
+        )
+
+        rewardedVideoAd?.loadAd(
+            rewardedVideoAd?.buildLoadAdConfig()
+                ?.withAdListener(object : RewardedInterstitialAdListener {
+                    override fun onError(p0: Ad?, p1: com.facebook.ads.AdError?) {
+                        Log.e("META_AD","AdError: "+p1?.errorMessage  )
+
+                    }
+
+                    override fun onAdLoaded(ad: Ad) {
+                        Log.d("META_AD", "Rewarded Loaded")
+                    }
+                    override fun onLoggingImpression(ad: Ad) {}
+
+                    override fun onAdClicked(ad: Ad) {}
+
+
+                    override fun onRewardedInterstitialCompleted() {
+                        Log.e("META_AD","onRewardedInterstitialCompleted: " )
+
+                    }
+
+                    override fun onRewardedInterstitialClosed() {
+                        Log.e("META_AD","onRewardedInterstitialClosed: "  )
+
+                    }
+                })
+                ?.build()
+        )
+    }
 }

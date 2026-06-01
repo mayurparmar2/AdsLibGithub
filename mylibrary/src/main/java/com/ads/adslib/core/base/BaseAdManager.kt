@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import com.ads.adslib.core.callback.AdCallback
+import com.ads.adslib.core.callback.AdEvents
 import com.ads.adslib.core.callback.FullScreenCallbacks
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
@@ -79,6 +80,13 @@ abstract class BaseAdManager(
 
     /** Recursive waterfall step: try loader at [index], fall through on failure. */
     private fun attempt(context: Context, index: Int) {
+        // The manager may have been destroyed mid-waterfall — async loader
+        // callbacks can fire after destroy() emptied [loaders]. Bail instead of
+        // touching an empty list (was crashing on loaders.last()).
+        if (loaders.isEmpty()) {
+            AdLog.d(config.placementKey, "attempt() after destroy — aborting")
+            return
+        }
         if (index >= loaders.size) {
             fail(AdError(loaders.last().network, -2,
                 "Waterfall exhausted for ${config.placementKey}"))
@@ -91,6 +99,8 @@ abstract class BaseAdManager(
             context = context,
             onLoaded = {
                 main.post {
+                    // Ignore a late success on a destroyed manager.
+                    if (loaders.isEmpty()) return@post
                     loadedLoader = loader
                     state = AdLoadState.LOADED
                     AdLog.d(config.placementKey, "loaded via ${loader.network}")
@@ -99,6 +109,8 @@ abstract class BaseAdManager(
             },
             onFailed = { error ->
                 main.post {
+                    // Ignore a late failure on a destroyed manager.
+                    if (loaders.isEmpty()) return@post
                     AdLog.w(config.placementKey, "fallback: ${loader.network} failed -> $error")
                     loader.destroy()
                     attempt(context, index + 1)
@@ -161,10 +173,10 @@ abstract class BaseAdManager(
      *
      * Rewards are forwarded only when the active callback is a [RewardCallback].
      */
-    protected fun fullScreenCallbacks(): FullScreenCallbacks = FullScreenCallbacks(
-        onShown        = { net -> dispatch { onShown(net) } },
+    protected fun  fullScreenCallbacks(): FullScreenCallbacks = FullScreenCallbacks(
+        onShown        = { net -> AdEvents.onAdShown?.invoke(net, config.format); dispatch { onShown(net) } },
         onDismissed    = { net -> onFullScreenClosed(); dispatch { onDismissed(net) } },
-        onClicked      = { net -> dispatch { onClicked(net) } },
+        onClicked      = { net -> AdEvents.onAdClicked?.invoke(net, config.format); dispatch { onClicked(net) } },
         onImpression   = { net -> dispatch { onImpression(net) } },
         onFailedToShow = { err -> onFullScreenClosed(); dispatch { onFailedToShow(err) } },
         onRewardEarned = { type, amount ->

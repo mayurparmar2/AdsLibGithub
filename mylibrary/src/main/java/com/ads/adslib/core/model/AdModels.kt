@@ -36,7 +36,9 @@ data class AdUnitConfig(
     val placementKey: String,
     val format: AdFormat,
     val waterfall: List<NetworkAdUnit>,
-    val bannerSize: BannerAdSize = BannerAdSize.ADAPTIVE
+    val bannerSize: BannerAdSize = BannerAdSize.ADAPTIVE,
+    /** Only relevant for NATIVE format — which native style to render. */
+    val nativeType: NativeType = NativeType.NATIVE
 ) {
     /** Networks that are currently enabled, preserving waterfall order. */
     val activeUnits: List<NetworkAdUnit>

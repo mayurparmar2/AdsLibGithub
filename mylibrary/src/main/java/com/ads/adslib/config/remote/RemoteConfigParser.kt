@@ -103,7 +103,11 @@ object RemoteConfigParser {
     private fun parseEntry(obj: JSONObject, enabled: Boolean): PlacementEntry {
         // AdMob uses ad_unit_id; Meta/Unity use placement_id.
         val id = obj.optString("ad_unit_id").ifBlank { obj.optString("placement_id") }
-        return PlacementEntry(enabled = enabled, adId = id)
+        // Native-only optional render style: "native" | "native_banner" | "medium_rectangle".
+        val nativeType = com.ads.adslib.core.model.NativeType.fromString(
+            obj.optString("type").ifBlank { null }
+        )
+        return PlacementEntry(enabled = enabled, adId = id, nativeType = nativeType)
     }
 
     private fun String.toNetwork(): AdNetwork? = when (lowercase().trim()) {

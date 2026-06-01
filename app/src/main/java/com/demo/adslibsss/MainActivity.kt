@@ -1,6 +1,7 @@
 package com.demo.adslibsss
 
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -13,6 +14,7 @@ import com.ads.adslib.config.remote.AdsConfigRepository
 import com.ads.adslib.core.callback.AdCallback
 import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdError
+import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.BannerAdSize
 import com.ads.adslib.smart.SmartAdManager
@@ -42,9 +44,10 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         binding = MainActivityBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
         setupButtons()
         initAds()
+        App.instance?.loadRewardedAd()
+
     }
 
     override fun onResume() {
@@ -92,17 +95,18 @@ class MainActivity : AppCompatActivity() {
 
         // Rewarded for the "search" screen.
         binding.showRewarded.setOnClickListener {
-            if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
-            val mgr = rewardedManager
-            when {
-                AdsConfigRepository.rewardedConfig("search") == null ->
-                    toast("ℹ️ Rewarded disabled in config")
-                mgr == null || !mgr.isReady() -> {
-                    toast("⏳ Rewarded loading...")
-                    loadRewarded()
-                }
-                else -> mgr.show(this)
-            }
+            App.instance?.showRewardedAd()
+//            if (!adsReady) { toast("⏳ SDK initializing..."); return@setOnClickListener }
+//            val mgr = rewardedManager
+//            when {
+//                AdsConfigRepository.rewardedConfig("search") == null ->
+//                    toast("ℹ️ Rewarded disabled in config")
+//                mgr == null || !mgr.isReady() -> {
+//                    toast("⏳ Rewarded loading...")
+//                    loadRewarded()
+//                }
+//                else -> mgr.show(this)
+//            }
         }
 
         // Native for the "detail" screen (RC waterfall: admob → meta).
@@ -154,8 +158,18 @@ class MainActivity : AppCompatActivity() {
         loadBottomBannerFromConfig("search")  // bottom banner — "search" screen
     }
 
+
+//    3902462033390284_3902470250056129
+
+
     // ── Interstitial — RC-driven per-screen ───────────────────────────
     private fun loadInterstitial() {
+        // Don't recreate while a load is in flight or one is already ready —
+        // recreating re-issues loadAd() on the same placement, which Meta
+        // throttles ("Ad was re-loaded too frequently", code 1002).
+        interstitialManager?.let {
+            if (it.state == AdLoadState.LOADING || it.isReady()) return
+        }
         val config = AdsConfigRepository.interstitialConfig("search") ?: return
         interstitialManager?.destroy()
         interstitialManager = InterstitialAdManager(config).also { mgr ->
@@ -174,6 +188,12 @@ class MainActivity : AppCompatActivity() {
 
     // ── Rewarded — RC-driven per-screen ───────────────────────────────
     private fun loadRewarded() {
+        // Don't recreate while a load is in flight or one is already ready —
+        // recreating re-issues loadAd() on the same placement, which Meta
+        // throttles ("Ad was re-loaded too frequently", code 1002).
+        rewardedManager?.let {
+            if (it.state == AdLoadState.LOADING || it.isReady()) return
+        }
         val config = AdsConfigRepository.rewardedConfig("search") ?: return
         rewardedManager?.destroy()
         rewardedManager = RewardedAdManager(config).also { mgr ->
@@ -264,4 +284,5 @@ class MainActivity : AppCompatActivity() {
     /** Shared default ads_config — used only as an offline fallback. */
     private fun defaultAdsConfigJson(): String =
         AdsConfigDefaults.ADS_CONFIG
+
 }

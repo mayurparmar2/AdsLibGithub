@@ -5,6 +5,7 @@ import com.ads.adslib.core.model.AdFormat
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.BannerAdSize
+import com.ads.adslib.core.model.NativeType
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.ads.adslib.util.AdLog
 
@@ -61,8 +62,30 @@ object AdsConfigRepository {
     fun bannerConfig(screen: String, size: BannerAdSize = BannerAdSize.ADAPTIVE): AdUnitConfig? =
         buildConfig(screen, AdFormat.BANNER, size) { it.banner[screen] }
 
-    fun nativeConfig(screen: String): AdUnitConfig? =
-        buildConfig(screen, AdFormat.NATIVE) { it.native[screen] }
+    fun nativeConfig(screen: String): AdUnitConfig? {
+        if (!config.enabled) return null
+        // Collect (network, entry) so we can also read the native render type.
+        val picked = config.providerPriority.mapNotNull { net ->
+            val provider = config.providers[net]?.takeIf { it.enabled } ?: return@mapNotNull null
+            val entry = provider.native[screen]?.takeIf { it.enabled && it.adId.isNotBlank() }
+                ?: return@mapNotNull null
+            net to entry
+        }
+        if (picked.isEmpty()) {
+            AdLog.d("ads_config", "NATIVE/$screen — no enabled units")
+            return null
+        }
+        // Render type comes from the highest-priority provider that has this screen.
+        val type = picked.first().second.nativeType
+        return AdUnitConfig(
+            placementKey = screen,
+            format       = AdFormat.NATIVE,
+            waterfall    = picked.map { (net, entry) -> NetworkAdUnit(net, entry.adId) },
+            bannerSize   = if (type == NativeType.MEDIUM_RECTANGLE) BannerAdSize.MEDIUM_RECTANGLE
+                           else BannerAdSize.ADAPTIVE,
+            nativeType   = type,
+        )
+    }
 
     fun interstitialConfig(screen: String): AdUnitConfig? =
         buildConfig(screen, AdFormat.INTERSTITIAL) { p ->

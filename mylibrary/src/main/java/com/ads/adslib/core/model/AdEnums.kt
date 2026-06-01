@@ -42,3 +42,28 @@ enum class BannerAdSize {
     MEDIUM_RECTANGLE, // 300x250
     ADAPTIVE          // full-width adaptive
 }
+
+/**
+ * Render style for a NATIVE placement, selectable per-screen from Remote Config
+ * via the `type` field on a native entry.
+ *
+ * - [NATIVE] — full native ad (media/large image + headline + body + CTA).
+ *   Meta: NativeAd; AdMob: native template.
+ * - [NATIVE_BANNER] — compact native (icon/logo + title + CTA, no media).
+ *   Meta: NativeBannerAd; AdMob falls back to its native template.
+ * - [MEDIUM_RECTANGLE] — a 300x250 banner (not a true native); served by the
+ *   banner pipeline. The host renders it via the banner manager.
+ */
+enum class NativeType {
+    NATIVE,
+    NATIVE_BANNER,
+    MEDIUM_RECTANGLE;
+
+    companion object {
+        fun fromString(value: String?): NativeType = when (value?.lowercase()?.trim()) {
+            "native_banner", "nativebanner", "banner" -> NATIVE_BANNER
+            "medium_rectangle", "mrec", "rectangle"   -> MEDIUM_RECTANGLE
+            else -> NATIVE
+        }
+    }
+}
