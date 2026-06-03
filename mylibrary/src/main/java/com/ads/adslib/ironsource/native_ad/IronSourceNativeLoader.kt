@@ -18,6 +18,7 @@ import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.NativeAdStyle
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.util.AdLog
 import com.ironsource.mediationsdk.adunit.adapter.utility.AdInfo
 import com.ironsource.mediationsdk.ads.nativead.LevelPlayMediaView
 import com.ironsource.mediationsdk.ads.nativead.LevelPlayNativeAd
@@ -46,17 +47,22 @@ class IronSourceNativeLoader(
     private var adView: NativeAdLayout? = null
 
     override fun load(context: Context, onLoaded: () -> Unit, onFailed: (AdError) -> Unit) {
+        val placement = unit.adUnitId.ifBlank { "<default>" }
+        AdLog.d(TAG, "load requested — placement='$placement'")
         // LevelPlayNativeAd.Builder requires an Activity context.
         val activity = context as? Activity ?: run {
+            AdLog.w(TAG, "FAILED — needs Activity context, got ${context.javaClass.simpleName}")
             onFailed(AdError(AdNetwork.IRONSOURCE, -1, "IronSourceNativeLoader requires Activity context"))
             return
         }
 
         state = AdLoadState.LOADING
         // Defer until LevelPlay init has completed (see IronSourceInterstitialLoader).
+        AdLog.d(TAG, "waiting for LevelPlay init…")
         AdsSdk.whenLevelPlayReady(
             onReady = { startLoad(activity, onLoaded, onFailed) },
             onFailed = {
+                AdLog.w(TAG, "FAILED — LevelPlay not initialized (placement='$placement')")
                 state = AdLoadState.FAILED
                 onFailed(AdError(AdNetwork.IRONSOURCE, 508, "LevelPlay not initialized"))
             }
@@ -64,6 +70,7 @@ class IronSourceNativeLoader(
     }
 
     private fun startLoad(activity: Activity, onLoaded: () -> Unit, onFailed: (AdError) -> Unit) {
+        AdLog.d(TAG, "init ready → loadAd() placement='${unit.adUnitId.ifBlank { "<default>" }}'")
         val ad = LevelPlayNativeAd.Builder()
             .withActivity(activity)
             // unit.adUnitId carries the configured placement name (LevelPlay native
@@ -73,10 +80,12 @@ class IronSourceNativeLoader(
                 override fun onAdLoaded(loaded: LevelPlayNativeAd?, adInfo: AdInfo?) {
                     val resolved = loaded ?: nativeAd
                     if (resolved == null) {
+                        AdLog.w(TAG, "FAILED — onAdLoaded gave a null native ad")
                         state = AdLoadState.FAILED
                         onFailed(AdError(AdNetwork.IRONSOURCE, -1, "native loaded null"))
                         return
                     }
+                    AdLog.d(TAG, "LOADED — title='${resolved.title}' net='${adInfo?.adNetwork}'")
                     nativeAd = resolved
                     adView = buildView(activity, resolved)
                     state = AdLoadState.LOADED
@@ -84,6 +93,7 @@ class IronSourceNativeLoader(
                 }
 
                 override fun onAdLoadFailed(failed: LevelPlayNativeAd?, error: IronSourceError?) {
+                    AdLog.w(TAG, "FAILED — code=${error?.errorCode} msg='${error?.errorMessage}'")
                     state = AdLoadState.FAILED
                     onFailed(
                         AdError(
@@ -94,11 +104,15 @@ class IronSourceNativeLoader(
                     )
                 }
 
-                override fun onAdClicked(clicked: LevelPlayNativeAd?, adInfo: AdInfo?) =
+                override fun onAdClicked(clicked: LevelPlayNativeAd?, adInfo: AdInfo?) {
+                    AdLog.d(TAG, "clicked")
                     onClickedCb(AdNetwork.IRONSOURCE)
+                }
 
-                override fun onAdImpression(shown: LevelPlayNativeAd?, adInfo: AdInfo?) =
+                override fun onAdImpression(shown: LevelPlayNativeAd?, adInfo: AdInfo?) {
+                    AdLog.d(TAG, "impression")
                     onImpressionCb(AdNetwork.IRONSOURCE)
+                }
             })
             .build()
 
@@ -212,6 +226,7 @@ class IronSourceNativeLoader(
     }
 
     private companion object {
+        const val TAG = "is_native"
         const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
         const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
     }
