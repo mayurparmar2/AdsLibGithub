@@ -5,8 +5,8 @@ import com.ads.adslib.core.base.NetworkAdLoader
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.ironsource.interstitial.IronSourceInterstitialLoader
 import com.ads.adslib.meta.interstitial.MetaInterstitialLoader
-import com.ads.adslib.unity.interstitial.UnityInterstitialLoader
 
 /**
  * Public manager for interstitial placements. Builds AdMob loaders for now;
@@ -25,6 +25,6 @@ class InterstitialAdManager(config: AdUnitConfig) : BaseAdManager(config) {
     override fun createLoader(unit: NetworkAdUnit): NetworkAdLoader? = when (unit.network) {
         AdNetwork.ADMOB -> AdMobInterstitialLoader(unit, fullScreenCallbacks())
         AdNetwork.META  -> MetaInterstitialLoader(unit, fullScreenCallbacks())
-        AdNetwork.UNITY -> UnityInterstitialLoader(unit, fullScreenCallbacks())
+        AdNetwork.IRONSOURCE -> IronSourceInterstitialLoader(unit, fullScreenCallbacks())
     }
 }

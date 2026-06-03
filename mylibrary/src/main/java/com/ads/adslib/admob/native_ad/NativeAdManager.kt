@@ -8,6 +8,7 @@ import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NativeAdStyle
 import com.ads.adslib.core.model.NativeType
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.ironsource.native_ad.IronSourceNativeLoader
 import com.ads.adslib.meta.native_ad.MetaNativeBannerLoader
 import com.ads.adslib.meta.native_ad.MetaNativeLoader
 import com.ads.adslib.util.AdLog
@@ -63,8 +64,12 @@ class NativeAdManager(
                 onImpressionCb = { net -> dispatch { onImpression(net) } }
             )
         }
-        // Unity Ads does not support native ad format
-        else -> null
+        AdNetwork.IRONSOURCE -> IronSourceNativeLoader(
+            unit           = unit,
+            style          = style,
+            onClickedCb    = { net -> dispatch { onClicked(net) } },
+            onImpressionCb = { net -> dispatch { onImpression(net) } }
+        )
     }
 
     /**

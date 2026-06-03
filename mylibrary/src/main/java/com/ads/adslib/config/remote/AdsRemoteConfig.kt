@@ -35,7 +35,10 @@ data class ProviderConfig(
     val network: AdNetwork,
     val enabled: Boolean,
 
-    /** Unity only — required by UnityAds.initialize(). Null for AdMob/Meta. */
+    /**
+     * ironSource / LevelPlay only — the app key required by LevelPlay.init()
+     * (parsed from `app_key`, legacy `game_id` fallback). Null for AdMob/Meta.
+     */
     val gameId: String? = null,
 
     /** AdMob only — single App Open placement. */

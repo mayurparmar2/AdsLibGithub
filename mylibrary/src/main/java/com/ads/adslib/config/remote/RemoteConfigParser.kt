@@ -53,7 +53,8 @@ object RemoteConfigParser {
         return ProviderConfig(
             network = net,
             enabled = pj.optBoolean("enabled", false),
-            gameId  = pj.optString("game_id").ifBlank { null },
+            // LevelPlay/ironSource uses `app_key`; legacy `game_id` kept as fallback.
+            gameId  = pj.optString("app_key").ifBlank { pj.optString("game_id") }.ifBlank { null },
 
             appOpen = pj.optJSONObject("app_open")?.let { parseEntry(it, it.optBoolean("enabled", true)) },
 
@@ -113,7 +114,8 @@ object RemoteConfigParser {
     private fun String.toNetwork(): AdNetwork? = when (lowercase().trim()) {
         "admob" -> AdNetwork.ADMOB
         "meta", "facebook", "fan" -> AdNetwork.META
-        "unity" -> AdNetwork.UNITY
+        // "unity" kept for backward-compat — the LevelPlay rung mediates Unity too.
+        "ironsource", "levelplay", "unity" -> AdNetwork.IRONSOURCE
         else -> null
     }
 }

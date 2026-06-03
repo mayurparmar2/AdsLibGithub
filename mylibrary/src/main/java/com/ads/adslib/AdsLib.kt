@@ -57,7 +57,7 @@ object AdsLib {
             activity      = activity,
             debug         = myLibrary.isDebugBuild(),
             adsConfigJson = null, // MyLibrary already loaded RC into AdsConfigRepository
-            unityGameId   = null,
+            ironSourceAppKey = null,
             smartConfig   = null, // MyLibrary.onAdsReady() starts SmartAdManager
             onReady       = { myLibrary.onAdsReady(); onReady() },
             onBlocked     = onBlocked,
@@ -77,8 +77,8 @@ object AdsLib {
      *   game id / waterfall is available immediately. The host app may also load
      *   it itself via [AdsConfigRepository.load]; passing it here is just a
      *   convenience / offline fallback.
-     * @param unityGameId   Explicit Unity game id. If null, it is read from the
-     *   loaded `ads_config` (`AdsConfigRepository.unityGameId()`).
+     * @param ironSourceAppKey Explicit ironSource / LevelPlay app key. If null, it
+     *   is read from the loaded `ads_config` (`AdsConfigRepository.ironSourceAppKey()`).
      * @param smartConfig   When non-null, the app-wide [SmartAdManager]
      *   preloaders (interstitial / rewarded / app-open / native cache) start once
      *   the SDKs are ready. Null = use only the per-screen managers.
@@ -89,7 +89,7 @@ object AdsLib {
         activity: Activity,
         debug: Boolean,
         adsConfigJson: String? = null,
-        unityGameId: String? = null,
+        ironSourceAppKey: String? = null,
         testDeviceIds: List<String> = emptyList(),
         metaTestDeviceHashes: List<String> = emptyList(),
         smartConfig: SmartAdConfig? = null,
@@ -118,7 +118,7 @@ object AdsLib {
                     hasConsent           = consent.canRequestAds,
                     testDeviceIds        = testDeviceIds,
                     metaTestDeviceHashes = metaTestDeviceHashes,
-                    unityGameId          = unityGameId ?: AdsConfigRepository.unityGameId(),
+                    ironSourceAppKey     = ironSourceAppKey ?: AdsConfigRepository.ironSourceAppKey(),
                 ) {
                     maybeStartSmartManager(activity, smartConfig)
                     onReady()

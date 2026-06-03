@@ -53,7 +53,8 @@ class RemoteConfigParserTest {
     fun `valid json parses enabled and provider priority`() {
         val cfg = RemoteConfigParser.parse(validJson)
         assertTrue(cfg.enabled)
-        assertEquals(listOf(AdNetwork.ADMOB, AdNetwork.META, AdNetwork.UNITY), cfg.providerPriority)
+        // "unity" maps to IRONSOURCE (LevelPlay mediates Unity) for backward-compat.
+        assertEquals(listOf(AdNetwork.ADMOB, AdNetwork.META, AdNetwork.IRONSOURCE), cfg.providerPriority)
     }
 
     @Test
@@ -80,12 +81,13 @@ class RemoteConfigParserTest {
     }
 
     @Test
-    fun `unity game id parsed and unknown formats are empty`() {
-        val unity = RemoteConfigParser.parse(validJson).providers[AdNetwork.UNITY]!!
-        assertFalse(unity.enabled)
-        assertEquals("12345", unity.gameId)
-        assertTrue(unity.native.isEmpty())
-        assertNull(unity.appOpen)
+    fun `ironsource app key parsed and unknown formats are empty`() {
+        // JSON uses legacy "unity" key + "game_id" — both still map to IRONSOURCE.
+        val ironsource = RemoteConfigParser.parse(validJson).providers[AdNetwork.IRONSOURCE]!!
+        assertFalse(ironsource.enabled)
+        assertEquals("12345", ironsource.gameId)
+        assertTrue(ironsource.native.isEmpty())
+        assertNull(ironsource.appOpen)
     }
 
     @Test
@@ -104,7 +106,7 @@ class RemoteConfigParserTest {
     fun `unknown provider names are dropped from priority`() {
         val json = """
             { "ads": { "enabled": true,
-              "provider_priority": ["admob", "ironsource", "meta"],
+              "provider_priority": ["admob", "applovin", "meta"],
               "providers": {} } }
         """.trimIndent()
         val cfg = RemoteConfigParser.parse(json)

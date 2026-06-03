@@ -6,7 +6,14 @@ package com.ads.adslib.core.model
 enum class AdNetwork {
     ADMOB,
     META,
-    UNITY
+
+    /**
+     * ironSource / Unity LevelPlay. A single waterfall rung that internally
+     * mediates ironSource's own demand plus Unity Ads (the two merged into the
+     * LevelPlay SDK). Replaced the former standalone `UNITY` value — LevelPlay
+     * bundles Unity, so a separate standalone-Unity rung is no longer possible.
+     */
+    IRONSOURCE
 }
 
 /**

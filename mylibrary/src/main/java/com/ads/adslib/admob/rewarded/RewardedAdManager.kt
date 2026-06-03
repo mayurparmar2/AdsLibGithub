@@ -7,8 +7,8 @@ import com.ads.adslib.core.callback.RewardCallback
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.ironsource.rewarded.IronSourceRewardedLoader
 import com.ads.adslib.meta.rewarded.MetaRewardedLoader
-import com.ads.adslib.unity.rewarded.UnityRewardedLoader
 
 /**
  * Waterfall manager for rewarded ad placements.
@@ -25,7 +25,7 @@ import com.ads.adslib.unity.rewarded.UnityRewardedLoader
  *     waterfall    = listOf(
  *         NetworkAdUnit(AdNetwork.ADMOB, "ca-app-pub-xxx/rewarded_id"),
  *         // NetworkAdUnit(AdNetwork.META,  "META_PLACEMENT"),   // future
- *         // NetworkAdUnit(AdNetwork.UNITY, "UNITY_PLACEMENT"),  // future
+ *         // NetworkAdUnit(AdNetwork.IRONSOURCE, "IRONSOURCE_AD_UNIT_ID"),  // future
  *     )
  * )
  * val mgr = RewardedAdManager(config)
@@ -52,6 +52,6 @@ class RewardedAdManager(config: AdUnitConfig) : BaseAdManager(config) {
     override fun createLoader(unit: NetworkAdUnit): NetworkAdLoader? = when (unit.network) {
         AdNetwork.ADMOB -> AdMobRewardedLoader(unit, fullScreenCallbacks())
         AdNetwork.META  -> MetaRewardedLoader(unit, fullScreenCallbacks())
-        AdNetwork.UNITY -> UnityRewardedLoader(unit, fullScreenCallbacks())
+        AdNetwork.IRONSOURCE -> IronSourceRewardedLoader(unit, fullScreenCallbacks())
     }
 }

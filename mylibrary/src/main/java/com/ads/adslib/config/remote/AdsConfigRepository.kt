@@ -48,14 +48,18 @@ object AdsConfigRepository {
         config = RemoteConfigParser.parse(json)
         if (freqCap == null) freqCap = FrequencyCapManager(context)
         AdLog.d("ads_config", "loaded: enabled=${config.enabled}, priority=${config.providerPriority}")
+        // A fresh config may carry the ironSource app key that wasn't available
+        // when AdsSdk.initialize ran (Remote Config not yet activated on first
+        // launch). Kick LevelPlay init now so ironSource works this session.
+        com.ads.adslib.AdsSdk.ensureLevelPlayInit(ironSourceAppKey())
         onConfigLoaded?.invoke()
     }
 
     val isLoaded: Boolean get() = config !== AdsRemoteConfig.EMPTY
     val adsEnabled: Boolean get() = config.enabled
 
-    /** Unity game id (for UnityAds.initialize), or null. */
-    fun unityGameId(): String? = config.providers[AdNetwork.UNITY]?.gameId
+    /** ironSource / LevelPlay app key (for LevelPlay.init), or null. */
+    fun ironSourceAppKey(): String? = config.providers[AdNetwork.IRONSOURCE]?.gameId
 
     // ── Per-format config builders ───────────────────────────────────
 

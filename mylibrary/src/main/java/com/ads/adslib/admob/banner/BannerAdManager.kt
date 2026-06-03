@@ -8,8 +8,8 @@ import com.ads.adslib.core.base.NetworkAdLoader
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
 import com.ads.adslib.core.model.NetworkAdUnit
+import com.ads.adslib.ironsource.banner.IronSourceBannerLoader
 import com.ads.adslib.meta.banner.MetaBannerLoader
-import com.ads.adslib.unity.banner.UnityBannerLoader
 import com.ads.adslib.util.AdLog
 
 /**
@@ -27,7 +27,7 @@ import com.ads.adslib.util.AdLog
  *     waterfall    = listOf(
  *         NetworkAdUnit(AdNetwork.ADMOB, "ca-app-pub-xxx/banner_id"),
  *         NetworkAdUnit(AdNetwork.META,  "YOUR_META_BANNER_PLACEMENT_ID"),
- *         NetworkAdUnit(AdNetwork.UNITY, "YOUR_UNITY_BANNER_PLACEMENT_ID"),
+ *         NetworkAdUnit(AdNetwork.IRONSOURCE, "YOUR_IRONSOURCE_BANNER_AD_UNIT_ID"),
  *     )
  * )
  * val mgr = BannerAdManager(config)
@@ -54,12 +54,11 @@ class BannerAdManager(config: AdUnitConfig) : BaseAdManager(config) {
             onClickedCb    = { net -> dispatch { onClicked(net) } },
             onImpressionCb = { net -> dispatch { onImpression(net) } }
         )
-        AdNetwork.UNITY -> UnityBannerLoader(
+        AdNetwork.IRONSOURCE -> IronSourceBannerLoader(
             unit        = unit,
             bannerSize  = config.bannerSize,
             onClickedCb = { net -> dispatch { onClicked(net) } }
         )
-        else -> null
     }
 
     /**
