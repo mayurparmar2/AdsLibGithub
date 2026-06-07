@@ -4,6 +4,15 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+
+    <application>
+        <!-- AD_SERVICES_CONFIG conflict: play-services-ads and Firebase
+             measurement both declare this property. Force the GMA (ads) config. -->
+        <property
+            android:name="android.adservices.AD_SERVICES_CONFIG"
+            android:resource="@xml/gma_ad_services_config"
+            tools:replace="android:resource" />
+    </application>
     <!--
         NOTE: Do NOT declare com.google.android.gms.ads.AD_MANAGER_APP here.
         This library uses AdMob (com.google.android.gms.ads.*) APIs, not Google

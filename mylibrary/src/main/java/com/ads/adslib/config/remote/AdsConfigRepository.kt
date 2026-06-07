@@ -1,6 +1,10 @@
 package com.ads.adslib.config.remote
 
 import android.content.Context
+import com.android.volley.DefaultRetryPolicy
+import com.android.volley.Request
+import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.ads.adslib.core.model.AdFormat
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.AdUnitConfig
@@ -8,6 +12,7 @@ import com.ads.adslib.core.model.BannerAdSize
 import com.ads.adslib.core.model.NativeType
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.ads.adslib.util.AdLog
+import org.json.JSONObject
 
 /**
  * Single source of truth for Remote-Config-driven ad configuration.
@@ -34,6 +39,11 @@ object AdsConfigRepository {
     private var config: AdsRemoteConfig = AdsRemoteConfig.EMPTY
     private var freqCap: FrequencyCapManager? = null
 
+    /** Last loaded raw `ads_config` JSON string (so hosts can read app-specific fields). */
+    @Volatile
+    var rawJson: String = ""
+        private set
+
     /** Notified after each successful [load] so late-arriving RC can kick preloaders. */
     @Volatile
     private var onConfigLoaded: (() -> Unit)? = null
@@ -45,6 +55,7 @@ object AdsConfigRepository {
 
     /** Parse and store the Remote Config JSON. Safe to call again on refresh. */
     fun load(context: Context, json: String) {
+        rawJson = json
         config = RemoteConfigParser.parse(json)
         if (freqCap == null) freqCap = FrequencyCapManager(context)
         AdLog.d("ads_config", "loaded: enabled=${config.enabled}, priority=${config.providerPriority}")
@@ -53,6 +64,56 @@ object AdsConfigRepository {
         // launch). Kick LevelPlay init now so ironSource works this session.
         com.ads.adslib.AdsSdk.ensureLevelPlayInit(ironSourceAppKey())
         onConfigLoaded?.invoke()
+    }
+
+    /**
+     * Fetch the `ads_config` JSON from [url] on a background thread, then [load] it
+     * (or [fallbackJson] if the fetch fails / returns invalid JSON). The host app no
+     * longer needs its own networking for config — the library owns the call.
+     *
+     * @param onReady invoked on the main thread with the effective JSON (fetched or
+     *   fallback) once settled — hosts use it to parse their own app-specific fields
+     *   and to gate ad initialization.
+     */
+    @JvmOverloads
+    fun loadFromUrl(
+        context: Context,
+        url: String,
+        fallbackJson: String = "",
+        timeoutMs: Int = 6_000,
+        onReady: ((json: String) -> Unit)? = null,
+    ) {
+        val appContext = context.applicationContext
+
+        fun settle(json: String, fetched: Boolean) {
+            // Volley delivers on the main thread.
+            if (json.isNotBlank()) load(appContext, json)
+            AdLog.d("ads_config", "loadFromUrl settled — fetched=$fetched")
+            onReady?.invoke(json)
+        }
+
+        val request = StringRequest(
+            Request.Method.GET,
+            url,
+            { body ->
+                val json = try {
+                    JSONObject(body) // validate — throws if malformed
+                    body
+                } catch (e: Exception) {
+                    AdLog.w("ads_config", "config invalid JSON — using fallback: ${e.message}")
+                    fallbackJson
+                }
+                settle(json, fetched = json === body)
+            },
+            { error ->
+                AdLog.w("ads_config", "config fetch error: ${error.message} — using fallback")
+                settle(fallbackJson, fetched = false)
+            }
+        ).apply {
+            retryPolicy = DefaultRetryPolicy(timeoutMs, 1, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT)
+            setShouldCache(true) // honor the config CDN cache headers → faster repeat loads
+        }
+        Volley.newRequestQueue(appContext).add(request)
     }
 
     val isLoaded: Boolean get() = config !== AdsRemoteConfig.EMPTY

@@ -68,6 +68,10 @@ dependencies {
 
     implementation("androidx.core:core-ktx:1.15.0")
 
+    // Volley — fast async config fetch (AdsConfigRepository.loadFromUrl) with
+    // connection pooling + HTTP cache (honors the config CDN's cache headers).
+    implementation("com.android.volley:volley:1.2.1")
+
     // Unit tests. org.json is only a stub in android.jar, so pull the real
     // implementation onto the JVM test classpath to exercise RemoteConfigParser.
     testImplementation("junit:junit:4.13.2")
