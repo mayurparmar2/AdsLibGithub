@@ -57,7 +57,8 @@ enum class BannerAdSize {
  * - [NATIVE] — full native ad (media/large image + headline + body + CTA).
  *   Meta: NativeAd; AdMob: native template.
  * - [NATIVE_BANNER] — compact native (icon/logo + title + CTA, no media).
- *   Meta: NativeBannerAd; AdMob falls back to its native template.
+ *   Meta: NativeBannerAd; AdMob: premium glassmorphism banner template
+ *   (`admob_native_banner_premium.xml`).
  * - [MEDIUM_RECTANGLE] — a 300x250 banner (not a true native); served by the
  *   banner pipeline. The host renders it via the banner manager.
  */

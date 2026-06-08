@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Rounded 12dp backing for the large media area — also acts as a neutral
+     placeholder tint before the media creative renders. clipToOutline on the
+     host FrameLayout clips the MediaView to these corners. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <corners android:radius="12dp" />
+    <solid android:color="@color/adslib_nb_icon_bg" />
+</shape>

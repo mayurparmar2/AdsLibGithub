@@ -25,6 +25,14 @@ data class SmartAdConfig(
     /** Minimum seconds between two interstitial shows. */
     val interstitialIntervalSec: Long = 30L,
 
+    // ── App Open ───────────────────────────────────────────────────
+    /**
+     * Minimum seconds between two App Open ad shows (frequency cap). Applies to
+     * both the automatic background→foreground path and the cold-start show, so
+     * rapid app switching never shows back-to-back App Open ads. Set 0 to disable.
+     */
+    val appOpenMinIntervalSec: Long = 240L,   // 4 min
+
     // ── Native Cache ───────────────────────────────────────────────
     /** Max pre-loaded native ads to keep in memory at once. */
     val nativeCacheSize: Int = 3,

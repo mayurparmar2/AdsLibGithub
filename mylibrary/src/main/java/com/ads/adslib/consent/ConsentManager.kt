@@ -24,6 +24,29 @@ class ConsentManager(activity: Activity) {
     val canRequestAds: Boolean get() = consentInformation.canRequestAds()
 
     /**
+     * Whether a "privacy options" entry point is required for this user (i.e. the
+     * UMP form offers an ongoing way to change consent — typically EU/EEA users).
+     * Only meaningful after [gatherConsent] / a consent-info update has completed.
+     * Use this to show/hide a "Manage consent" button so it only appears where
+     * it's actually required.
+     */
+    val isPrivacyOptionsRequired: Boolean
+        get() = consentInformation.privacyOptionsRequirementStatus ==
+            ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
+
+    /**
+     * Show the UMP privacy-options form so the user can change/withdraw consent.
+     * This is the correct action for a "Manage consent" button (no [reset] needed).
+     * [onComplete] runs once the form is dismissed (or immediately on error).
+     */
+    fun showPrivacyOptionsForm(activity: Activity, onComplete: () -> Unit = {}) {
+        UserMessagingPlatform.showPrivacyOptionsForm(activity) { formError ->
+            if (formError != null) AdLog.w("consent", "privacy options error: ${formError.message}")
+            onComplete()
+        }
+    }
+
+    /**
      * Request consent info and show the consent form if required.
      *
      * @param activity current activity (form host).

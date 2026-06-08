@@ -49,5 +49,15 @@
     <color name="gnt_ad_grey">#939393</color>
     <color name="btn_ad_button">#1A2196F3</color>
 
+    <!-- ── Compact native-banner palette (light, app-integrated; overridable
+         per-asset via NativeAdStyle for dark mode) ── -->
+    <color name="adslib_nb_icon_bg">#0F101828</color>      <!-- subtle icon backing panel -->
+    <color name="adslib_nb_headline">#FF15171C</color>     <!-- near-black headline (light theme default) -->
+    <color name="adslib_nb_body">#FF6B7280</color>         <!-- gray secondary text -->
+    <color name="adslib_nb_cta_start">#FF2C8DF5</color>    <!-- CTA gradient start (blue) -->
+    <color name="adslib_nb_cta_end">#FF1E88E5</color>      <!-- CTA gradient end (accent blue) -->
+    <color name="adslib_nb_cta_text">#FFFFFFFF</color>     <!-- CTA label -->
+    <color name="adslib_nb_badge_bg">#1A1E88E5</color>     <!-- "Sponsored" pill fill (light blue) -->
+    <color name="adslib_nb_badge_text">#FF1E78C8</color>   <!-- "Sponsored" pill text (blue) -->
 
 </resources>

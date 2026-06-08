@@ -46,6 +46,7 @@ class NativeAdManager(
         AdNetwork.ADMOB -> AdMobNativeLoader(
             unit           = unit,
             style          = style,
+            nativeType     = config.nativeType,
             onClickedCb    = { net -> dispatch { onClicked(net) } },
             onImpressionCb = { net -> dispatch { onImpression(net) } }
         )

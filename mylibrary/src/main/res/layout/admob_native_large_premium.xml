@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Premium LARGE MEDIA AdMob Native Ad (Google Play-store style) — shown between
+  vehicle-detail sections (e.g. after RC Information, before Insurance). Designed
+  to sit INSIDE the host's white native card chrome so it blends with app content.
+
+    [Sponsored]                                   (ⓘ AdChoices — SDK overlay)
+    [icon 48]  Advertiser
+               Headline (max 2 lines)
+    Description (max 2 lines)
+    ┌──────────────────────────────────────────┐
+    │            Media  (16:9, rounded 12)       │
+    └──────────────────────────────────────────┘
+    ★★★★☆  Google Play                  [ Install ]
+
+  • Root  : NativeAdView (required for AdMob Native Advanced).
+  • Assets registered by AdMobNativeLoader: ad_app_icon, ad_advertiser,
+    ad_headline, ad_body, ad_media, ad_stars, ad_store, ad_price, ad_call_to_action.
+  • Colors default to light theme, overridable per-asset via NativeAdStyle so the
+    template adapts to dark mode; background is transparent (host card supplies the
+    white surface + rounded corners + shadow).
+  • Policy: "Sponsored" badge always visible; AdMob overlays AdChoices top-right.
+
+  Render type "native" (the default) selects this template.
+-->
+<com.google.android.gms.ads.nativead.NativeAdView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent">
+
+        <!-- Sponsored badge (top-left); AdChoices overlaid top-right by the SDK -->
+        <TextView
+            android:id="@+id/ad_attribution"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/adslib_native_badge_bg"
+            android:letterSpacing="0.05"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:text="@string/adslib_sponsored_label"
+            android:textColor="@color/adslib_nb_badge_text"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Advertiser app icon (48dp) -->
+        <ImageView
+            android:id="@+id/ad_app_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/adslib_native_icon_bg"
+            android:contentDescription="@null"
+            android:padding="6dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/adslib_native_icon_placeholder"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_attribution" />
+
+        <!-- Advertiser name + headline, beside the icon -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical"
+            app:layout_constraintBottom_toBottomOf="@id/ad_app_icon"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@id/ad_app_icon"
+            app:layout_constraintTop_toTopOf="@id/ad_app_icon">
+
+            <TextView
+                android:id="@+id/ad_advertiser"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:textColor="@color/adslib_nb_body"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="VahanInfo" />
+
+            <TextView
+                android:id="@+id/ad_headline"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="1dp"
+                android:ellipsize="end"
+                android:lineSpacingMultiplier="0.98"
+                android:maxLines="2"
+                android:textColor="@color/adslib_nb_headline"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                tools:text="Check RC, Challan &amp; Insurance Instantly" />
+        </LinearLayout>
+
+        <!-- Description / body (max 2 lines) -->
+        <TextView
+            android:id="@+id/ad_body"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:ellipsize="end"
+            android:lineSpacingMultiplier="0.98"
+            android:maxLines="2"
+            android:textColor="@color/adslib_nb_body"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_app_icon"
+            tools:text="Verify any vehicle in seconds — owner, RC, insurance and challan details, all in one place." />
+
+        <!-- Large media — full width, fixed height capped so the whole card stays
+             within ~320dp (a true full-width 16:9 would be ~171dp tall and blow the
+             height budget). The MediaView is centre-cropped in code to fill this box
+             edge-to-edge, so there is no empty letterbox space around the creative.
+             Rounded 12dp via clipToOutline on the wrapper. -->
+        <FrameLayout
+            android:id="@+id/ad_media_wrap"
+            android:layout_width="0dp"
+            android:layout_height="132dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/adslib_native_media_bg"
+            android:clipToOutline="true"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_body">
+
+            <com.google.android.gms.ads.nativead.MediaView
+                android:id="@+id/ad_media"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+        </FrameLayout>
+
+        <!-- Bottom row: star rating + store (start) · CTA (end) -->
+        <Button
+            android:id="@+id/ad_call_to_action"
+            android:layout_width="110dp"
+            android:layout_height="46dp"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/adslib_native_cta_bg"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:minWidth="0dp"
+            android:minHeight="0dp"
+            android:paddingHorizontal="8dp"
+            android:stateListAnimator="@null"
+            android:textAllCaps="false"
+            android:textColor="@color/adslib_nb_cta_text"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_media_wrap"
+            tools:text="Install" />
+
+        <RatingBar
+            android:id="@+id/ad_stars"
+            style="?android:attr/ratingBarStyleSmall"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:isIndicator="true"
+            android:numStars="5"
+            android:stepSize="0.5"
+            app:layout_constraintBottom_toBottomOf="@id/ad_call_to_action"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/ad_call_to_action"
+            tools:rating="4.5" />
+
+        <TextView
+            android:id="@+id/ad_store"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="12dp"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:textColor="@color/adslib_nb_body"
+            android:textSize="12sp"
+            app:layout_constraintBottom_toBottomOf="@id/ad_call_to_action"
+            app:layout_constraintEnd_toStartOf="@id/ad_call_to_action"
+            app:layout_constraintStart_toEndOf="@id/ad_stars"
+            app:layout_constraintTop_toTopOf="@id/ad_call_to_action"
+            tools:text="Google Play" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.gms.ads.nativead.NativeAdView>

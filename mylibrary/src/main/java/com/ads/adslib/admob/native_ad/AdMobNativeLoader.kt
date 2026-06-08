@@ -2,6 +2,8 @@ package com.ads.adslib.admob.native_ad
 
 import android.app.Activity
 import android.content.Context
+import android.content.res.ColorStateList
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -15,6 +17,7 @@ import com.ads.adslib.core.model.AdError
 import com.ads.adslib.core.model.AdLoadState
 import com.ads.adslib.core.model.AdNetwork
 import com.ads.adslib.core.model.NativeAdStyle
+import com.ads.adslib.core.model.NativeType
 import com.ads.adslib.core.model.NetworkAdUnit
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdLoader
@@ -28,9 +31,13 @@ import com.google.android.gms.ads.nativead.NativeAdView
 class AdMobNativeLoader(
     unit: NetworkAdUnit,
     private val style: NativeAdStyle? = null,
+    private val nativeType: NativeType = NativeType.NATIVE,
     private val onClickedCb: (AdNetwork) -> Unit,
     private val onImpressionCb: (AdNetwork) -> Unit
 ) : NetworkAdLoader(unit) {
+
+    /** Compact, self-themed premium banner template (no media, no host recolor). */
+    private val isBanner: Boolean = nativeType == NativeType.NATIVE_BANNER
 
     private var nativeAd: NativeAd? = null
     private var adView: NativeAdView? = null
@@ -59,8 +66,12 @@ class AdMobNativeLoader(
     }
 
     private fun inflateAndPopulate(context: Context, ad: NativeAd): NativeAdView {
+
+
+        val layoutRes = if (isBanner) R.layout.admob_native_banner_premium
+                        else R.layout.admob_native_large_premium
         val view = LayoutInflater.from(context)
-            .inflate(R.layout.admob_native_ad_template, null) as NativeAdView
+            .inflate(layoutRes, null) as NativeAdView
 
         // Inflated with a null root, so the XML root width/height are dropped —
         // restore full-width so the ad fills its container instead of wrapping.
@@ -92,12 +103,20 @@ class AdMobNativeLoader(
             (it as Button).text = ad.callToAction
         }
         view.iconView?.let {
-            it.visibility = if (ad.icon != null) View.VISIBLE else View.GONE
-            (it as ImageView).setImageDrawable(ad.icon?.drawable)
+            // Both premium templates ship a placeholder src, so keep the advertiser
+            // icon slot visible for trust and only swap in the real icon when the ad
+            // provides one (otherwise the XML placeholder stays).
+            it.visibility = View.VISIBLE
+            ad.icon?.drawable?.let { d -> (it as ImageView).setImageDrawable(d) }
         }
         view.mediaView?.let {
             it.visibility = if (ad.mediaContent != null) View.VISIBLE else View.GONE
-            (it as MediaView).mediaContent = ad.mediaContent
+            (it as MediaView).apply {
+                // Fill the fixed-height media box edge-to-edge (no empty letterbox
+                // space around the creative).
+                setImageScaleType(ImageView.ScaleType.CENTER_CROP)
+                mediaContent = ad.mediaContent
+            }
         }
         view.starRatingView?.let {
             it.visibility = if (ad.starRating != null) View.VISIBLE else View.GONE
@@ -117,6 +136,9 @@ class AdMobNativeLoader(
         }
 
         // Apply optional host theme colors so the template adapts (esp. dark mode).
+        // The compact banner is transparent by design (the host card supplies the
+        // surface), so the background override is a no-op there but text/CTA colors
+        // still let it match the app's accent and dark/light text.
         style?.let { s ->
             s.backgroundColor?.let { bg ->
                 // The white background lives on the inner LinearLayout, not the
@@ -132,7 +154,10 @@ class AdMobNativeLoader(
                 (view.storeView as? TextView)?.setTextColor(c)
             }
             s.ctaTextColor?.let { (view.callToActionView as? Button)?.setTextColor(it) }
-            s.ctaBackgroundColor?.let { (view.callToActionView as? Button)?.setBackgroundColor(it) }
+            // Tint (don't replace) the CTA background so rounded corners survive.
+            s.ctaBackgroundColor?.let {
+                (view.callToActionView as? Button)?.backgroundTintList = ColorStateList.valueOf(it)
+            }
         }
 
         // Must be called after all views are registered and populated

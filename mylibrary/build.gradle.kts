@@ -40,6 +40,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.0.21")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")
+    // ConstraintLayout — used by the premium native-banner template
+    // (admob_native_banner_premium.xml).
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
 
     // ironSource / Unity LevelPlay — the unified mediation SDK. It BUNDLES Unity
     // Ads internally, so the former standalone `com.unity3d.ads:unity-ads` MUST

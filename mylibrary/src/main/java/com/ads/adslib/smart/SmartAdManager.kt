@@ -139,6 +139,32 @@ object SmartAdManager {
     val isInterstitialReady: Boolean
         get() = interstitialPreloader?.isReady == true
 
+    // ── App Open ─────────────────────────────────────────────────────
+
+    /**
+     * Show an App Open ad on **cold start** (app launch), over [activity]
+     * (typically the splash), before continuing. Shows immediately if an ad is
+     * preloaded; otherwise waits up to [timeoutMs] for the in-flight load.
+     * [onComplete] runs exactly once — on ad dismiss, timeout, or when ads are
+     * unavailable — so the caller can proceed (e.g. open the home screen).
+     *
+     * The automatic background→foreground App Open path is unaffected; this is
+     * the opt-in launch trigger. Calls back immediately if not initialized.
+     */
+    fun showAppOpenOnColdStart(
+        activity: Activity,
+        timeoutMs: Long = 4_000L,
+        onComplete: () -> Unit = {},
+    ) {
+        val preloader = appOpenPreloader
+        if (preloader == null) {
+            AdLog.d("smart_ad_manager", "showAppOpenOnColdStart: not initialized")
+            onComplete()
+            return
+        }
+        preloader.showOnColdStart(activity, timeoutMs, onComplete)
+    }
+
     // ── Rewarded ─────────────────────────────────────────────────────
 
     /**

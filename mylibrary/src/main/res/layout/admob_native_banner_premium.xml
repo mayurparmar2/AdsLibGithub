@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Compact AdMob Native Banner (no media) — designed to sit INSIDE the host's
+  native card chrome so it reads as an integrated app component.
+
+    [Sponsored]                                   (ⓘ AdChoices — SDK overlay)
+    [ icon 48 ]  Headline (max 2 lines)            [ CTA ]
+                 Description (max 2 lines)
+
+  • Root  : NativeAdView (required for AdMob Native Advanced). A ConstraintLayout
+            holds the Sponsored badge; a single horizontal row (icon · text · CTA)
+            below it is the height driver, so a 2-line headline + 2-line body
+            always render fully (the row grows; icon & CTA stay vertically centered).
+  • Assets registered by AdMobNativeLoader:
+      ad_app_icon (48dp — always shown, placeholder when the ad has no icon),
+      ad_headline, ad_body, ad_call_to_action
+  • Colors default to a light theme but are overridable per-asset via the host
+    NativeAdStyle (titleColor / bodyColor / cta colors) so the same template
+    adapts to dark mode.
+  • Policy: static "Sponsored" badge is always visible; AdMob auto-overlays the
+    AdChoices icon in the top-right corner (NativeAdOptions default placement) —
+    the content is kept clear of that corner.
+
+  Render type "native_banner" in Remote Config selects this template.
+-->
+<com.google.android.gms.ads.nativead.NativeAdView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:minHeight="66dp">
+
+        <!-- Top row: Sponsored badge (top-left). AdChoices is overlaid top-right
+             by the AdMob SDK, so this row is kept clear on the end side. -->
+        <TextView
+            android:id="@+id/ad_attribution"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/adslib_native_badge_bg"
+            android:letterSpacing="0.05"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="3dp"
+            android:text="@string/adslib_sponsored_label"
+            android:textColor="@color/adslib_nb_badge_text"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Content row: icon · text · CTA. Height = tallest child, so 2-line
+             headline + 2-line body always fit; icon & CTA center vertically. -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/ad_attribution">
+
+            <!-- Advertiser icon (48dp) — always visible; shows a placeholder when
+                 the ad provides no icon. -->
+            <ImageView
+                android:id="@+id/ad_app_icon"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:background="@drawable/adslib_native_icon_bg"
+                android:contentDescription="@null"
+                android:padding="6dp"
+                android:scaleType="centerInside"
+                android:src="@drawable/adslib_native_icon_placeholder" />
+
+            <!-- Text column (headline + body) -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_marginEnd="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- Headline (bold, max 2 lines) -->
+                <TextView
+                    android:id="@+id/ad_headline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:lineSpacingMultiplier="0.98"
+                    android:maxLines="2"
+                    android:textColor="@color/adslib_nb_headline"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    tools:text="Check RC, Challan &amp; Insurance Instantly" />
+
+                <!-- Body (max 2 lines) -->
+                <TextView
+                    android:id="@+id/ad_body"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:ellipsize="end"
+                    android:lineSpacingMultiplier="0.98"
+                    android:maxLines="2"
+                    android:textColor="@color/adslib_nb_body"
+                    android:textSize="12sp"
+                    tools:text="Verify any vehicle in seconds — fast, accurate and secure" />
+            </LinearLayout>
+
+            <!-- CTA button (blue, medium, right) -->
+            <Button
+                android:id="@+id/ad_call_to_action"
+                android:layout_width="86dp"
+                android:layout_height="42dp"
+                android:background="@drawable/adslib_native_cta_bg"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:minWidth="0dp"
+                android:minHeight="0dp"
+                android:paddingHorizontal="6dp"
+                android:stateListAnimator="@null"
+                android:textAllCaps="false"
+                android:textColor="@color/adslib_nb_cta_text"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                tools:text="Install" />
+        </LinearLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</com.google.android.gms.ads.nativead.NativeAdView>
